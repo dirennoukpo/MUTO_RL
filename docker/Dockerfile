@@ -1,6 +1,11 @@
 FROM ros:humble-ros-base-jammy
 ENV DEBIAN_FRONTEND=noninteractive
 
+ARG USER_HOME=/home/pi
+ARG WORKING_DIR=/home/pi/TEKBOT_ROBOTICS
+ENV USER_HOME=${USER_HOME}
+ENV WORKING_DIR=${WORKING_DIR}
+
 # ────────────────────────────────────────────────────────────────
 # Locale UTF-8 (requis pour ROS 2 dans un container minimal)
 # ────────────────────────────────────────────────────────────────
@@ -203,7 +208,7 @@ RUN rosdep init || true && rosdep update --rosdistro humble
 # ────────────────────────────────────────────────────────────────
 # 15. Dossier de travail
 # ────────────────────────────────────────────────────────────────
-WORKDIR /home/pi/TEKBOT-ROBOTICS
+WORKDIR ${WORKING_DIR}
 
 # ────────────────────────────────────────────────────────────────
 # 16. Configuration automatique du shell (Bash)

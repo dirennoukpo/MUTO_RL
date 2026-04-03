@@ -17,6 +17,19 @@ NAME = $(shell grep '^CONTAINER_NAME=' $(ENV_DIR)/$(PROFILE) | cut -d'=' -f2)
 # Commande de base incluant le fichier .env spécifique
 COMPOSE = DISPLAY=$${DISPLAY:-:0} ENV_PROFILE=$(PROFILE) docker compose -f docker/docker-compose.yml --env-file $(ENV_DIR)/$(BASE_ENV) --env-file $(ENV_DIR)/$(PROFILE)
 
+define RUN_WITH_DOCKER_ACCESS
+	@if docker info >/dev/null 2>&1; then \
+		$(1); \
+	elif getent group docker | grep -qw "$(USER_NAME)"; then \
+		echo "INFO: session sans groupe docker actif, execution via sg docker"; \
+		sg docker -c '$(1)'; \
+	else \
+		echo "ERREUR: utilisateur $(USER_NAME) absent du groupe docker"; \
+		echo "Lancez: sudo usermod -aG docker $(USER_NAME), puis reconnectez-vous"; \
+		exit 1; \
+	fi
+endef
+
 validate-envs:
 	@for f in $(REQUIRED_ENVS); do \
 		if [ ! -f "$(ENV_DIR)/$$f" ]; then \
@@ -38,18 +51,18 @@ status: validate-envs
 	@echo "Container: $(NAME)"
 
 build: validate-envs
-	$(COMPOSE) build
+	$(call RUN_WITH_DOCKER_ACCESS,$(COMPOSE) build)
 
 run: validate-envs
 	-xhost +local:docker 2>/dev/null || true
-	$(COMPOSE) up -d
+	$(call RUN_WITH_DOCKER_ACCESS,$(COMPOSE) up -d)
 
 shell:
-	docker exec -it $(NAME) bash
+	$(call RUN_WITH_DOCKER_ACCESS,docker exec -it $(NAME) bash)
 
 clean: validate-envs
-	$(COMPOSE) down
+	$(call RUN_WITH_DOCKER_ACCESS,$(COMPOSE) down)
 	rm -rf build/ install/ log/
 
 build-ros:
-	docker exec -it $(NAME) colcon build --symlink-install
+	$(call RUN_WITH_DOCKER_ACCESS,docker exec -it $(NAME) colcon build --symlink-install)

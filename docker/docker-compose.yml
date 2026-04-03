@@ -4,6 +4,9 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      args:
+        USER_HOME: ${USER_HOME}
+        WORKING_DIR: ${WORKING_DIR}
     env_file:
       - ./config/.env.base    # variables système (commitables)
       - ./config/${ENV_PROFILE}    # profil machine obligatoire
