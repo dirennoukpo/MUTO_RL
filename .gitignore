@@ -15,6 +15,7 @@ docker-compose.*.yml
 
 # Local environment
 docker/config/.env.user
+docker/config/.env.diren
 
 # VS Code
 .vscode/

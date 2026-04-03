@@ -3,12 +3,24 @@ USER_NAME := $(shell whoami)
 BASE_ENV = .env.base
 PI_ENV = .env.raspberrypi
 JETSON_ENV = .env.jetson_nano
-REQUIRED_ENVS = $(BASE_ENV) $(PI_ENV) $(JETSON_ENV)
+DEFAULT_ENV = .env.default
+USER_ENV = .env.$(USER_NAME)
+ALL_ENV_FILES = $(notdir $(wildcard $(ENV_DIR)/.env.*))
+IGNORED_ENV_FILES = $(BASE_ENV) .env.user $(PI_ENV) $(JETSON_ENV) $(DEFAULT_ENV) $(USER_ENV)
+CUSTOM_ENV_FILES = $(filter-out $(IGNORED_ENV_FILES),$(ALL_ENV_FILES))
+CUSTOM_ENV = $(firstword $(CUSTOM_ENV_FILES))
+REQUIRED_ENVS = $(BASE_ENV) $(PI_ENV) $(JETSON_ENV) $(DEFAULT_ENV)
 
 ifeq ($(USER_NAME),jetson)
 PROFILE ?= $(JETSON_ENV)
-else
+else ifeq ($(USER_NAME),pi)
 PROFILE ?= $(PI_ENV)
+else ifneq (,$(wildcard $(ENV_DIR)/$(USER_ENV)))
+PROFILE ?= $(USER_ENV)
+else ifneq ($(strip $(CUSTOM_ENV)),)
+PROFILE ?= $(CUSTOM_ENV)
+else
+PROFILE ?= $(DEFAULT_ENV)
 endif
 
 # Récupération dynamique du nom du container depuis le .env choisi
@@ -37,8 +49,9 @@ validate-envs:
 			exit 1; \
 		fi; \
 	done
-	@if [ "$(PROFILE)" != "$(PI_ENV)" ] && [ "$(PROFILE)" != "$(JETSON_ENV)" ]; then \
-		echo "ERREUR: PROFILE doit etre $(PI_ENV) ou $(JETSON_ENV)"; \
+	@if [ ! -f "$(ENV_DIR)/$(PROFILE)" ]; then \
+		echo "ERREUR: profile introuvable $(ENV_DIR)/$(PROFILE)"; \
+		echo "Ajoutez ce fichier ou utilisez PROFILE=$(DEFAULT_ENV)"; \
 		exit 1; \
 	fi
 
@@ -47,7 +60,7 @@ status: validate-envs
 	@echo "User: $(USER_NAME)"
 	@echo "Base: $(ENV_DIR)/$(BASE_ENV)"
 	@echo "Profile: $(ENV_DIR)/$(PROFILE)"
-	@echo "Required: $(ENV_DIR)/$(BASE_ENV), $(ENV_DIR)/$(PI_ENV), $(ENV_DIR)/$(JETSON_ENV)"
+	@echo "Required: $(ENV_DIR)/$(BASE_ENV), $(ENV_DIR)/$(PI_ENV), $(ENV_DIR)/$(JETSON_ENV), $(ENV_DIR)/$(DEFAULT_ENV)"
 	@echo "Container: $(NAME)"
 
 build: validate-envs
@@ -57,12 +70,30 @@ run: validate-envs
 	-xhost +local:docker 2>/dev/null || true
 	$(call RUN_WITH_DOCKER_ACCESS,$(COMPOSE) up -d)
 
+run-clean: validate-envs
+	-xhost +local:docker 2>/dev/null || true
+	$(call RUN_WITH_DOCKER_ACCESS,$(COMPOSE) up -d --remove-orphans)
+
 shell:
-	$(call RUN_WITH_DOCKER_ACCESS,docker exec -it $(NAME) bash)
+	$(call RUN_WITH_DOCKER_ACCESS,cid="$$($(COMPOSE) ps -q ros-dev)"; \
+	if [ -z "$$cid" ]; then \
+		$(COMPOSE) up -d; \
+		cid="$$($(COMPOSE) ps -q ros-dev)"; \
+	fi; \
+	if [ -z "$$cid" ]; then \
+		echo "ERREUR: conteneur du service ros-dev introuvable"; \
+		exit 1; \
+	fi; \
+	docker exec -it "$$cid" bash)
 
 clean: validate-envs
 	$(call RUN_WITH_DOCKER_ACCESS,$(COMPOSE) down)
 	rm -rf build/ install/ log/
 
 build-ros:
-	$(call RUN_WITH_DOCKER_ACCESS,docker exec -it $(NAME) colcon build --symlink-install)
+	$(call RUN_WITH_DOCKER_ACCESS,cid="$$($(COMPOSE) ps -q ros-dev)"; \
+	if [ -z "$$cid" ]; then \
+		echo "ERREUR: conteneur du service ros-dev introuvable. Lancez d'abord make run"; \
+		exit 1; \
+	fi; \
+	docker exec -it "$$cid" colcon build --symlink-install)
