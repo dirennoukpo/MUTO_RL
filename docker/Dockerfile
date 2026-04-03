@@ -1,7 +1,9 @@
 FROM ros:humble-ros-base-jammy
 ENV DEBIAN_FRONTEND=noninteractive
 
+# ────────────────────────────────────────────────────────────────
 # Locale UTF-8 (requis pour ROS 2 dans un container minimal)
+# ────────────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y locales \
     && locale-gen en_US en_US.UTF-8 \
     && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
@@ -65,7 +67,7 @@ RUN apt-get update && apt-get install -y \
     ros-humble-sensor-msgs-py \
     \
 # ────────────────────────────────────────────────────────────────
-# 6. Simulation — Gazebo Fortress
+# 6. Simulation — Gazebo Fortress (Gazebo Classic EOL jan. 2025)
 # ────────────────────────────────────────────────────────────────
     ros-humble-ros-gz \
     ros-humble-ros-gz-sim \
@@ -155,26 +157,33 @@ RUN apt-get update && apt-get install -y \
     curl \
     wget \
     rsync \
+    iptables \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # ────────────────────────────────────────────────────────────────
-# 12. Venv dédié au projet — isolé du Python système
-#     Placé dans /opt/tekbot_venv pour être accessible à tous
-#     les utilisateurs et survivre aux montages de volumes.
-#
-#     IMPORTANT : colcon ne doit PAS compiler ce dossier.
-#     Le fichier COLCON_IGNORE est créé automatiquement.
+# 12. Tailscale — installation via le dépôt officiel
+# ────────────────────────────────────────────────────────────────
+RUN curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg \
+        | tee /usr/share/keyrings/tailscale-archive-keyring.gpg > /dev/null \
+    && curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.tailscale-keyring.list \
+        | tee /etc/apt/sources.list.d/tailscale.list \
+    && apt-get update \
+    && apt-get install -y tailscale \
+    && rm -rf /var/lib/apt/lists/*
+
+# ────────────────────────────────────────────────────────────────
+# 13. Venv dédié au projet
 # ────────────────────────────────────────────────────────────────
 ENV VENV_PATH=/opt/tekbot_venv
 RUN python3 -m venv --system-site-packages "$VENV_PATH" \
     && touch "$VENV_PATH/COLCON_IGNORE"
 
-# Toutes les commandes pip suivantes s'exécutent dans le venv
 ENV PATH="$VENV_PATH/bin:$PATH"
 
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# Paquets Python contrôlés — empy 3.3.4 OBLIGATOIRE pour colcon/ament
+# empy 3.3.4 OBLIGATOIRE pour colcon/ament Humble
 RUN pip install --no-cache-dir \
     "empy==3.3.4" \
     pytest-repeat \
@@ -187,17 +196,17 @@ RUN pip install --no-cache-dir \
     requests
 
 # ────────────────────────────────────────────────────────────────
-# 13. Initialisation rosdep
+# 14. Initialisation rosdep
 # ────────────────────────────────────────────────────────────────
 RUN rosdep init || true && rosdep update --rosdistro humble
 
 # ────────────────────────────────────────────────────────────────
-# 14. Dossier de travail
+# 15. Dossier de travail
 # ────────────────────────────────────────────────────────────────
 WORKDIR /home/pi/TEKBOT-ROBOTICS
 
 # ────────────────────────────────────────────────────────────────
-# 15. Configuration automatique du shell (Bash)
+# 16. Configuration automatique du shell (Bash)
 # ────────────────────────────────────────────────────────────────
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc && \
     echo "if [ -f install/setup.bash ]; then source install/setup.bash; fi" >> ~/.bashrc && \
@@ -206,7 +215,7 @@ RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc && \
     echo "export RCUTILS_COLORIZED_OUTPUT=1" >> ~/.bashrc
 
 # ────────────────────────────────────────────────────────────────
-# 16. Script d'entrée
+# 17. Script d'entrée
 # ────────────────────────────────────────────────────────────────
 COPY ./docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
