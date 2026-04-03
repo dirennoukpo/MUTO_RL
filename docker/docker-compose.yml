@@ -1,0 +1,24 @@
+services:
+  ros-dev:
+    container_name: ${CONTAINER_NAME}
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    # On indique à Docker quel fichier de config charger
+    env_file:
+      - ../config/${ENV_PROFILE}
+    volumes:
+      - ${USER_HOME}:${USER_HOME}:rw
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /dev:/dev
+    environment:
+      - DISPLAY=${MY_DISPLAY}
+      - ROS_DOMAIN_ID=${DOMAIN_ID}
+      - ROS_LOCALHOST_ONLY=${LOCALHOST_ONLY}
+      - ROBOT_ROLE=${ROBOT_ROLE}
+      - TARGET_IP=${TARGET_IP}
+    network_mode: host
+    privileged: true
+    stdin_open: true
+    tty: true
+    working_dir: ${WORKING_DIR}

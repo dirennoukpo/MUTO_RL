@@ -1,0 +1,32 @@
+# Node/OS files
+.DS_Store
+Thumbs.db
+
+# Build outputs
+build/
+install/
+log/
+
+# Docker artifacts
+docker-compose.override.yml
+docker-compose.*.yml
+**/docker-compose.override.yml
+**/docker-compose.*.yml
+
+# Local environment
+config/.env
+config/*.env
+
+# VS Code
+.vscode/
+
+# Temporary files
+*.swp
+*~
+
+# Python
+__pycache__/
+*.pyc
+
+# ROS logs
+*.log
