@@ -1,5 +1,0 @@
-watchdog_node:
-  ros__parameters:
-    command_timeout_ms: 50.0
-    heartbeat_timeout_ms: 500.0
-    fall_accel_threshold_ms2: 29.4

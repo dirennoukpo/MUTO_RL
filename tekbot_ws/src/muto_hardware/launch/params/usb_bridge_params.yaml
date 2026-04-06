@@ -1,5 +1,0 @@
-usb_bridge_node:
-  ros__parameters:
-    loop_hz: 200
-    command_max_age_ms: 20.0
-    qos_depth: 1

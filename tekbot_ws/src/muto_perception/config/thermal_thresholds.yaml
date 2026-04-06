@@ -1,4 +1,0 @@
-thermal:
-  throttle_start_c: 60.0
-  throttle_stop_c: 45.0
-  critical_c: 75.0

@@ -1,5 +1,0 @@
-safety_filter_node:
-  ros__parameters:
-    rate_limit_deg: 8.0
-    command_max_age_ms: 20.0
-    oscillation_threshold: 0.35
