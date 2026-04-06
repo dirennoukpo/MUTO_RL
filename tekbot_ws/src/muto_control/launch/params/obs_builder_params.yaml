@@ -1,0 +1,7 @@
+obs_builder_node:
+  ros__parameters:
+    obs_dim: 70
+    spec_version: v3
+    norm_stats_file: norm_stats_v3.json
+    clamp_min: -5.0
+    clamp_max: 5.0

@@ -1,0 +1,4 @@
+mode_manager_node:
+  ros__parameters:
+    service_name: /mode_request
+    initial_mode: IDLE

@@ -1,0 +1,5 @@
+depth_processor_node:
+  ros__parameters:
+    rate_hz: 30.0
+    throttle_rate_hz: 15.0
+    obstacle_distance_m: 0.5

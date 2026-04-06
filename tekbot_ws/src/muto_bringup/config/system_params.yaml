@@ -1,0 +1,211 @@
+# ════════════════════════════════════════════════════════════════
+# system_params.yaml — Paramètres centralisés Muto RS
+# ════════════════════════════════════════════════════════════════
+#
+# Ce fichier est le point de configuration unique pour tous
+# les nœuds ROS 2 du workspace Muto RS.
+#
+# RÈGLE ABSOLUE : aucune valeur de chemin, IP, ou identifiant
+# machine n'est codée en dur ici. Toutes les valeurs dynamiques
+# utilisent la syntaxe ROS 2 : $(env NOM_VARIABLE)
+#
+# Les variables sont injectées par Docker au démarrage :
+#   Pi     : docker/config/.env.raspberrypi
+#   Jetson : docker/config/.env.jetson_nano
+#   Commun : docker/config/.env.base
+#
+# Variables utilisées dans ce fichier :
+#   $(env WORKING_DIR)  → chemin racine du projet
+#   $(env TARGET_IP)    → IP de la machine distante
+#   $(env DOMAIN_ID)    → ROS_DOMAIN_ID partagé (valeur dans .env.base)
+#
+# Valeurs techniques constantes (non injectées par .env) :
+#   rt_core, jitter_threshold_ms, gyro_calib_cycles, etc.
+#   Ces valeurs sont des constantes hardware non modifiables
+#   par déploiement — elles restent en dur légitimement.
+# ════════════════════════════════════════════════════════════════
+
+# ── RASPBERRY PI (ROBOT_ROLE=DRIVER) ─────────────────────────
+# Launch : src/muto_bringup/launch/pi_full.launch.py
+# Nœuds : usb_bridge_node, watchdog_node, mode_manager_node
+# Topic publiés : /imu/data (200 Hz), /joint_states (200 Hz), /system_status
+# Topic souscrits : /commands (100 Hz)
+
+usb_bridge_node:
+  ros__parameters:
+    # muto_lib_path : chemin vers libmuto_link_cpp_lib.so (librairie Dynamixel C API).
+    # $(env WORKING_DIR) est résolu par ROS 2 au démarrage du nœud.
+    # Source .env : WORKING_DIR dans docker/config/.env.raspberrypi
+    # La .so est montée via le volume Docker : ${USER_HOME}:${USER_HOME}:rw
+    # Pas installée via CMake — elle réside dans le bind mount du host.
+    # Peut être surchargé au lancement : ros2 launch muto_bringup pi_full.launch.py muto_lib_path:=/autre/chemin.so
+    muto_lib_path: "$(env WORKING_DIR)/muto_install/lib/libmuto_link_cpp_lib.so"
+    
+    # serial_port : port série pour le bus Dynamixel USB.
+    # Valeur standard Linux pour adaptateur USB-série.
+    # Si plusieurs adaptateurs sur le Pi : vérifier avec lsusb ou dmesg.
+    serial_port: "/dev/ttyUSB0"
+    
+    # baudrate : baudrate de communication Dynamixel (bits/s).
+    # Doit correspondre au débit configuré dans les servos Dynamixel.
+    # Valeurs typiques : 115200 ou 1000000.
+    baudrate: 115200
+    
+    # rt_core : CPU core dédié au thread temps réel (SCHED_FIFO, priorité 90).
+    # Doit correspondre à isolcpus=3 dans /boot/cmdline.txt du Raspberry Pi.
+    # Ne modifier que si le kernel Pi est reconfiguré (sinon performance dégradée).
+    rt_core: 3
+    
+    # servo_speed : vitesse de mouvement des servos (unités Dynamixel).
+    # Plage : 0 (arrêt) à max (dépend du modèle).
+    servo_speed: 200
+    
+    # jitter_threshold_ms : seuil d'alerte pour le jitter temporel (millisecondes).
+    # Si le délai entre lectures IMU/joints dépasse ce seuil → alerte publiée sur /hw/timing_jitter
+    # Typique pour RT sur Pi avec isolcpus : 5-10 ms.
+    jitter_threshold_ms: 5.5
+    
+    # command_age_max_ms : âge maximal d'une commande avant expiration.
+    # Si une commande est plus ancienne que cet âge → watchdog déclenche fallback sécurisé.
+    command_age_max_ms: 20.0
+    
+    # gyro_calib_cycles : nombre de cycles pour calibration statique du gyroscope au boot.
+    # Plus élevé = meilleure précision mais temps de boot plus long.
+    gyro_calib_cycles: 1000
+    
+    # gyro_outlier_sigma : seuil d'écart-type pour éliminer les outliers IMU.
+    # Valeurs > 3σ sont rejetées du filtre complémentaire.
+    gyro_outlier_sigma: 3.0
+
+watchdog_node:
+  ros__parameters:
+    # command_age_max_ms : répète les règles pour le watchdog (doit être cohérent avec usb_bridge).
+    # Voir usb_bridge_node::command_age_max_ms ci-dessus.
+    command_age_max_ms: 20.0
+    
+    # command_timeout_ms : timeout sur le topic /commands.
+    # Si aucun message /commands reçu pendant ce délai → SAFE_POSE envoyée.
+    command_timeout_ms: 50.0
+    
+    # heartbeat_timeout_ms : timeout pour détection de perte de communication Pi↔Jetson.
+    # Si aucun heartbeat reçu sur /heartbeat pendant ce délai → fallback sécurisé.
+    heartbeat_timeout_ms: 500.0
+    
+    # fall_accel_threshold_ms2 : seuil d'accélération (m/s²) pour détection de chute.
+    # Si accélération totale dépasse ce seuil → emergency stop.
+    # Valeur typique : ~9.8 m/s² (1 g) + marge.
+    fall_accel_threshold_ms2: 29.4
+
+mode_manager_node:
+  ros__parameters:
+    # model_card_path : chemin vers la carte d'identité du modèle RL.
+    # $(env WORKING_DIR) est résolu par ROS 2.
+    # Source .env : WORKING_DIR dans docker/config/.env.raspberrypi
+    # Contient les flags : sim_real_validated, dry_run_validated, etc.
+    # Utilisé par le FSM pour valider les transitions d'état (INIT→IDLE→DRY_RUN→RL_ACTIVE).
+    # Copie locale synchronisée depuis la Jetson via le volume partagé.
+    model_card_path: "$(env WORKING_DIR)/models/model_card_v003.json"
+
+# ── JETSON NANO (ROBOT_ROLE=BRAIN) ───────────────────────────
+# Launch : src/muto_bringup/launch/jetson_full.launch.py
+# Nœuds : obs_builder_node, safety_filter_node, depth_processor_node,
+#         lidar_processor_node, rl_policy_node, navigation_node
+# Topics publiés : /commands (100 Hz), /obs_valid, /inference/timing_warn, /commands_raw, /commands_dry_run
+# Topics souscrits : /imu/data, /joint_states, /system_mode, /camera/depth, /lidar/scan
+
+obs_builder_node:
+  ros__parameters:
+    # norm_stats_path : chemin vers les statistiques de normalisation du modèle RL.
+    # $(env WORKING_DIR) est résolu par ROS 2.
+    # Source .env : WORKING_DIR dans docker/config/.env.jetson_nano
+    # Contient min/max/mean/std pour les 70 dimensions d'observation.
+    # Utilisé pour normaliser l'observation avant passage au TensorRT engine.
+    norm_stats_path: "$(env WORKING_DIR)/models/norm_stats_v3.json"
+    
+    # max_torque : limitation en couple (N.m).
+    # Dépend des servos Dynamixel et du gearbox MUTO.
+    # Protections internes au nœud + filtre de sécurité.
+    max_torque: 1.0
+
+safety_filter_node:
+  ros__parameters:
+    # max_safe_velocity : limites de vitesse par articulation (rad/s).
+    # Tableau de 18 éléments (9 articulations × 2).
+    # Comparées aux commandes brutes du RL avant envoi au Pi.
+    max_safe_velocity: [6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0]
+    
+    # max_safe_current : limites de courant par articulation (Ampères).
+    # Tableau de 18 éléments.
+    # Protection pour éviter saturation des drivers motor si les commandes divergent.
+    max_safe_current: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    
+    # rate_limit_deg : limitation de la vitesse de changement (degrés/cycle).
+    # Évite les accélérations jerk élevées.
+    rate_limit_deg: 8.0
+    
+    # oscillation_threshold : seuil de détection d'oscillation (rad).
+    # Si détection → freeze commande et trigger mode SAFE.
+    oscillation_threshold: 0.25
+    
+    # com_stability_threshold : seuil de stabilité du centre de masse (m).
+    # Détection de perte d'équilibre imminent.
+    com_stability_threshold: 0.45
+    
+    # tau_decay : facteur de décroissance temporelle pour smoothing (0-1).
+    # Valeur plus élevée = smoothing plus agressif (lag plus élevé).
+    tau_decay: 0.5
+
+rl_policy_node:
+  ros__parameters:
+    # model_path : chemin vers le fichier modèle TensorRT compilé (.trt).
+    # $(env WORKING_DIR) est résolu par ROS 2.
+    # Source .env : WORKING_DIR dans docker/config/.env.jetson_nano
+    # Fichier binaire TensorRT — contient le graphe optimisé pour Jetson Nano.
+    # Testé uniquement en mode dry_run jusqu'à validation complète.
+    model_path: "$(env WORKING_DIR)/models/muto_rs_v003.trt"
+    
+    # model_card_path : chemin vers la carte d'identité du modèle.
+    # $(env WORKING_DIR) est résolu par ROS 2.
+    # Contient les flags : sim_real_validated, cross_corr_validated, dry_run_validated.
+    # Consulté au démarrage pour déterminer si inference est autorisée.
+    model_card_path: "$(env WORKING_DIR)/models/model_card_v003.json"
+    
+    # norm_stats_path : chemin vers les normes de normalisation.
+    # $(env WORKING_DIR) est résolu par ROS 2.
+    # Utilisé pour normaliser l'observation avant TensorRT.
+    norm_stats_path: "$(env WORKING_DIR)/models/norm_stats_v3.json"
+    
+    # obs_dim : dimension de l'espace d'observation (nombre de features).
+    # Doit correspondre aux dimensions d'entrée du modèle TensorRT.
+    obs_dim: 70
+    
+    # action_scale_rad : facteur d'échelle pour les actions (radians).
+    # Les sorties du RL (range [-1, 1]) sont multipliées par action_scale_rad.
+    action_scale_rad: 1.0
+    
+    # dry_run : booléen pour mode sécurisé (pas d'exécution réelle).
+    # Si true : les commandes RL ne sont pas envoyées au Pi.
+    # Basculer à false uniquement après validation complète des flags model_card.
+    dry_run: true
+
+depth_processor_node:
+  ros__parameters:
+    # rate_hz : fréquence de traitement des images RGB-D (Hz).
+    # Limitation CPU sur Jetson Nano (faible débit mémoire).
+    rate_hz: 30.0
+    
+    # throttle_rate_hz : fréquence de publication des frames traitées (Hz).
+    # Réduit la charge réseau et les latences.
+    throttle_rate_hz: 15.0
+
+lidar_processor_node:
+  ros__parameters:
+    # rate_hz : fréquence de traitement LiDAR (Hz).
+    # Limité par la vitesse de rotation du LiDAR et CPU Jetson.
+    rate_hz: 10.0
+
+navigation_node:
+  ros__parameters:
+    # loop_hz : fréquence de boucle du planificateur de trajectoire (Hz).
+    # Plus élevé = réactivité améliorée mais charge CPU augmentée.
+    loop_hz: 5.0

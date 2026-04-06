@@ -2,10 +2,14 @@
 .DS_Store
 Thumbs.db
 
-# Build outputs
+# Build outputs (colcon/catkin)
 build/
 install/
 log/
+devel/
+*.egg-info/
+dist/
+MANIFEST.egg-info/
 
 # Docker artifacts
 docker-compose.override.yml
@@ -17,16 +21,45 @@ docker-compose.*.yml
 docker/config/.env.user
 docker/config/.env.diren
 
-# VS Code
+# IDE
 .vscode/
-
-# Temporary files
+.idea/
 *.swp
+*.swo
 *~
+.DS_Store
 
 # Python
 __pycache__/
+*.py[cod]
 *.pyc
+*.pyo
+*.egg
+.Python
+.venv/
+venv/
+env/
+.tox/
+.coverage
+.coverage.*
+.pytest_cache/
+htmlcov/
 
-# ROS logs
+# ROS
+.ros/
 *.log
+/tmp/
+/root/.ros/log/
+
+# Environment files
+.env
+.env.local
+*.pem
+*.key
+
+# IDE/Editor temporaries
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
