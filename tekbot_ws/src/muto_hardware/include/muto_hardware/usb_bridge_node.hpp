@@ -74,12 +74,14 @@
 #include <string>
 #include <thread>
 
+#include <mutex>
 #include <dlfcn.h>
 
 #include "muto_hardware/complementary_filter.hpp"
 #include "muto_link/c_api.h"
 #include "muto_msgs/msg/commands.hpp"
 #include "muto_msgs/msg/stamped_imu.hpp"
+ std::mutex hw_mutex_;  ///< Serializes all USB/hardware I/O to prevent protocol collisions.
 #include "muto_msgs/msg/stamped_joint_state.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/float32.hpp"

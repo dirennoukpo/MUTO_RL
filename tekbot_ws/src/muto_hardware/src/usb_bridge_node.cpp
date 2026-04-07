@@ -280,8 +280,8 @@ UsbBridgeNode::UsbBridgeNode() : Node("usb_bridge_node") {
   imu_reads_divider_ = declare_parameter<int>("imu_reads_divider", 2);
   imu_angles_divider_ = declare_parameter<int>("imu_angles_divider", 8);
   servo_command_divider_ = declare_parameter<int>("servo_command_divider", 2);
-  if (servo_reads_per_cycle_ < 1) {
-    servo_reads_per_cycle_ = 1;
+  if (servo_reads_per_cycle_ < 0) {
+    servo_reads_per_cycle_ = 0;
   } else if (servo_reads_per_cycle_ > kServoCount) {
     servo_reads_per_cycle_ = kServoCount;
   }
@@ -504,6 +504,7 @@ void UsbBridgeNode::run_rt_loop() {
     // 2) Emission des commandes sur les 18 servos (decimee pour limiter la charge serie).
     const bool do_servo_write = (cid % static_cast<uint64_t>(servo_command_divider_)) == 0ULL;
     if (do_servo_write) {
+       std::lock_guard<std::mutex> lock(hw_mutex_);
       for (int n = 0; n < servo_commands_per_cycle_; ++n) {
         const uint8_t i = static_cast<uint8_t>((static_cast<int>(next_servo_write_idx_) + n) % kServoCount);
         const float deg_f = std::clamp(commanded_angles_rad_[i] * static_cast<float>(180.0 / M_PI), -90.0F, 90.0F);
@@ -518,22 +519,39 @@ void UsbBridgeNode::run_rt_loop() {
     }
 
     // 3) Lecture des angles reels via muto_read_servo_angle_deg (round-robin pour limiter la latence).
-    for (int n = 0; n < servo_reads_per_cycle_; ++n) {
-      const uint8_t i = static_cast<uint8_t>((static_cast<int>(next_servo_read_idx_) + n) % kServoCount);
-      int16_t raw_deg = 0;
-      const int ret = api_.read_servo_angle_deg(hw_, static_cast<uint8_t>(i + 1), &raw_deg);
-      if (ret == 0) {
-        shared_.measured_angles[i] = static_cast<float>(raw_deg) * static_cast<float>(M_PI / 180.0);
-      } else {
-        ++usb_error_count_;
-        ret_ok_this_cycle = false;
-        RCLCPP_WARN_THROTTLE(
-            get_logger(), *get_clock(), 1000,
-            "[MONO %ld ns] read_angle id=%d failed: %s",
-            t0, static_cast<int>(i + 1), last_hw_error().c_str());
+      // Mixed servo + IMU transactions in the same cycle can truncate replies on this bus.
+      // To keep the protocol stable, we prioritize at most one hardware read family per tick.
+      const bool do_imu_angles_read = (cid % static_cast<uint64_t>(imu_angles_divider_)) == 0ULL;
+      const bool do_imu_read = !do_imu_angles_read && ((cid % static_cast<uint64_t>(imu_reads_divider_)) == 0ULL);
+      const bool do_servo_read = !do_imu_angles_read && !do_imu_read;
+
+      if (servo_reads_per_cycle_ == 0) {
+        for (int i = 0; i < kServoCount; ++i) {
+          shared_.measured_angles[static_cast<size_t>(i)] = commanded_angles_rad_[static_cast<size_t>(i)];
+        }
+      } else if (do_servo_read) {
+        const bool is_startup_phase = (cid < 400ULL);
+        const int reads_this_cycle = is_startup_phase ? 0 : servo_reads_per_cycle_;
+        if (reads_this_cycle > 0) {
+          std::lock_guard<std::mutex> lock(hw_mutex_);
+          for (int n = 0; n < reads_this_cycle; ++n) {
+            const uint8_t i = static_cast<uint8_t>((static_cast<int>(next_servo_read_idx_) + n) % kServoCount);
+            int16_t raw_deg = 0;
+            const int ret = api_.read_servo_angle_deg(hw_, static_cast<uint8_t>(i + 1), &raw_deg);
+            if (ret == 0) {
+              shared_.measured_angles[i] = static_cast<float>(raw_deg) * static_cast<float>(M_PI / 180.0);
+            } else {
+              ++usb_error_count_;
+              ret_ok_this_cycle = false;
+              RCLCPP_WARN_THROTTLE(
+                  get_logger(), *get_clock(), 1000,
+                  "[MONO %ld ns] read_angle id=%d failed: %s",
+                  t0, static_cast<int>(i + 1), last_hw_error().c_str());
+            }
+          }
+          next_servo_read_idx_ = static_cast<uint8_t>((static_cast<int>(next_servo_read_idx_) + reads_this_cycle) % kServoCount);
+        }
       }
-    }
-    next_servo_read_idx_ = static_cast<uint8_t>((static_cast<int>(next_servo_read_idx_) + servo_reads_per_cycle_) % kServoCount);
 
     // 4) Estimation vitesse par difference finie (dt fixe = 5 ms).
     for (int i = 0; i < kServoCount; ++i) {
@@ -543,10 +561,9 @@ void UsbBridgeNode::run_rt_loop() {
     }
 
     // 5) Acquisition IMU brute + Euler depuis la C API (decimee pour limiter le blocage I/O).
-    const bool do_imu_read = (cid % static_cast<uint64_t>(imu_reads_divider_)) == 0ULL;
-    const bool do_imu_angles_read = (cid % static_cast<uint64_t>(imu_angles_divider_)) == 0ULL;
     if (do_imu_read) {
       muto_raw_imu_data raw{};
+        std::lock_guard<std::mutex> lock(hw_mutex_);
       const int ret_raw = api_.get_raw_imu(hw_, &raw);
       if (ret_raw != 0) {
         ret_ok_this_cycle = false;
@@ -589,6 +606,7 @@ void UsbBridgeNode::run_rt_loop() {
     }
     if (do_imu_angles_read) {
       muto_imu_angles ang{};
+      std::lock_guard<std::mutex> lock(hw_mutex_);
       const int ret_ang = api_.get_imu_angles(hw_, &ang);
       if (ret_ang != 0) {
         ret_ok_this_cycle = false;

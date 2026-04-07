@@ -48,8 +48,9 @@ usb_bridge_node:
     
     # baudrate : baudrate de communication Dynamixel (bits/s).
     # Doit correspondre au débit configuré dans les servos Dynamixel.
-    # Valeurs typiques : 115200 ou 460800 selon support adaptateur/carte.
-    # Basculé à 115200 pour alignement avec la configuration servo actuelle.
+    # Doit rester à 115200 pour correspondre à la configuration servo matérielle.
+    # NOTE (2026-04-07): Tentative 460800 échouée — servos configurés pour 115200 au démarrage.
+    # Augmenter baudrate nécessite reconfigurer chaque servo via protocol Dynamixel.
     baudrate: 115200
     
     # rt_core : CPU core dédié au thread temps réel (SCHED_FIFO, priorité 90).
@@ -80,8 +81,10 @@ usb_bridge_node:
     gyro_outlier_sigma: 3.0
 
     # servo_reads_per_cycle : nombre de retours servo lus a chaque cycle RT (round-robin).
-    # Plus faible = jitter plus bas, mais feedback complet des 18 servos moins frequent.
-    servo_reads_per_cycle: 1
+    # 0 désactive la lecture de feedback servo dans la boucle 200 Hz.
+    # Sur ce banc, la lecture servo provoque des trames IMU tronquées, donc on
+    # publie les angles commandés au lieu du feedback matériel.
+    servo_reads_per_cycle: 0
 
     # servo_commands_per_cycle : nombre de commandes servo envoyees par cycle RT (round-robin).
     # Valeur faible evite les rafales de 18 ecritures d'un coup sur le bus serie.
