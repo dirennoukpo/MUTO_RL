@@ -147,6 +147,13 @@ if not _WORKING_DIR:
     )
 
 
+def _resolve_working_dir_token(value: str) -> str:
+    """Resolve ROS-style WORKING_DIR tokens from parameterized paths."""
+    resolved = value.replace("$(env WORKING_DIR)", _WORKING_DIR)
+    resolved = resolved.replace("${WORKING_DIR}", _WORKING_DIR)
+    return resolved
+
+
 class RLPolicyNode(Node):
     def __init__(self) -> None:
         super().__init__("rl_policy_node")
@@ -160,11 +167,13 @@ class RLPolicyNode(Node):
         default_model_card = os.path.join(_WORKING_DIR, 'models', 'model_card_v003.json')
         default_norm_stats = os.path.join(_WORKING_DIR, 'models', 'norm_stats_v3.json')
         
-        self.model_path = self.declare_parameter('model_path', default_model_path).value
-        self.model_card_path = str(
-            self.declare_parameter("model_card_path", default_model_card).value
-        )
-        self.norm_stats_path = self.declare_parameter('norm_stats_path', default_norm_stats).value
+        configured_model_path = str(self.declare_parameter('model_path', default_model_path).value)
+        configured_model_card_path = str(self.declare_parameter("model_card_path", default_model_card).value)
+        configured_norm_stats_path = str(self.declare_parameter('norm_stats_path', default_norm_stats).value)
+
+        self.model_path = _resolve_working_dir_token(configured_model_path)
+        self.model_card_path = _resolve_working_dir_token(configured_model_card_path)
+        self.norm_stats_path = _resolve_working_dir_token(configured_norm_stats_path)
 
         self.model_card = self._load_model_card(self.model_card_path)
         self.flags_ok = self._flags_ok(self.model_card)

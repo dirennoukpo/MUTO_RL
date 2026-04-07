@@ -168,12 +168,12 @@ rl_policy_node:
     # $(env WORKING_DIR) est résolu par ROS 2.
     # Contient les flags : sim_real_validated, cross_corr_validated, dry_run_validated.
     # Consulté au démarrage pour déterminer si inference est autorisée.
-    model_card_path: "$(env WORKING_DIR)/models/model_card_v003.json"
+    model_card_path: "$(env WORKING_DIR)/tekbot_ws/src/muto_inference/models/model_card_v003.json"
     
     # norm_stats_path : chemin vers les normes de normalisation.
     # $(env WORKING_DIR) est résolu par ROS 2.
     # Utilisé pour normaliser l'observation avant TensorRT.
-    norm_stats_path: "$(env WORKING_DIR)/models/norm_stats_v3.json"
+    norm_stats_path: "$(env WORKING_DIR)/tekbot_ws/src/muto_inference/models/norm_stats_v3.json"
     
     # obs_dim : dimension de l'espace d'observation (nombre de features).
     # Doit correspondre aux dimensions d'entrée du modèle TensorRT.

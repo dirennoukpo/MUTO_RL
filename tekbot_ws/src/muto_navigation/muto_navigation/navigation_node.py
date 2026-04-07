@@ -11,6 +11,7 @@ from typing import List
 import rclpy
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 
 from muto_msgs.msg import ObstacleList
 from .obstacle_fusion import fuse_obstacles
@@ -26,9 +27,16 @@ class NavigationNode(Node):
         self.max_yaw = float(self.declare_parameter("max_yaw", 0.8).value)
         self.stop_distance = float(self.declare_parameter("obstacle_stop_distance_m", 0.5).value)
 
+        qos_obstacles = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+        )
+
         self.goal_pub = self.create_publisher(Twist, "/navigation/goal_velocity", 10)
-        self.depth_sub = self.create_subscription(ObstacleList, "/depth/obstacles", self.on_depth, 10)
-        self.lidar_sub = self.create_subscription(ObstacleList, "/lidar/obstacles", self.on_lidar, 10)
+        self.depth_sub = self.create_subscription(ObstacleList, "/depth/obstacles", self.on_depth, qos_obstacles)
+        self.lidar_sub = self.create_subscription(ObstacleList, "/lidar/obstacles", self.on_lidar, qos_obstacles)
         self.timer = self.create_timer(0.2, self.publish_goal)
 
     def on_depth(self, msg: ObstacleList) -> None:
