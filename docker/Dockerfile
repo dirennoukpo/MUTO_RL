@@ -1,10 +1,8 @@
 FROM ros:humble-ros-base-jammy
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG USER_HOME
 ARG WORKING_DIR
 
-ENV USER_HOME=${USER_HOME}
 ENV WORKING_DIR=${WORKING_DIR}
 
 # ────────────────────────────────────────────────────────────────
