@@ -65,7 +65,7 @@ usb_bridge_node:
     # Si le délai entre lectures IMU/joints dépasse ce seuil → alerte publiée sur /hw/timing_jitter
     # Typique pour RT sur Pi avec isolcpus : 5-10 ms.
     # En mode bench USB (sans chaine complete), augmenter ce seuil evite un spam inutile.
-    jitter_threshold_ms: 30.0
+    jitter_threshold_ms: 70.0
     
     # command_age_max_ms : âge maximal d'une commande avant expiration.
     # Si une commande est plus ancienne que cet âge → watchdog déclenche fallback sécurisé.
@@ -85,11 +85,11 @@ usb_bridge_node:
 
     # imu_reads_divider : lecture IMU tous les N cycles RT (1 = chaque cycle).
     # Augmenter cette valeur reduit le blocage serie et le jitter.
-    imu_reads_divider: 4
+    imu_reads_divider: 8
 
     # servo_command_divider : envoi des commandes servo tous les N cycles RT.
-    # A 200 Hz, valeur 2 => 100 Hz de commande, compatible avec /commands.
-    servo_command_divider: 2
+    # A 200 Hz, valeur 4 => 50 Hz de commande, mode bench stable.
+    servo_command_divider: 4
 
 watchdog_node:
   ros__parameters:
