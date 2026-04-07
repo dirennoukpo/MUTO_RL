@@ -276,15 +276,25 @@ UsbBridgeNode::UsbBridgeNode() : Node("usb_bridge_node") {
   gyro_calib_cycles_ = declare_parameter<int>("gyro_calib_cycles", 1000);
   gyro_outlier_sigma_ = declare_parameter<double>("gyro_outlier_sigma", 3.0);
   servo_reads_per_cycle_ = declare_parameter<int>("servo_reads_per_cycle", 3);
+  servo_commands_per_cycle_ = declare_parameter<int>("servo_commands_per_cycle", 1);
   imu_reads_divider_ = declare_parameter<int>("imu_reads_divider", 2);
+  imu_angles_divider_ = declare_parameter<int>("imu_angles_divider", 8);
   servo_command_divider_ = declare_parameter<int>("servo_command_divider", 2);
   if (servo_reads_per_cycle_ < 1) {
     servo_reads_per_cycle_ = 1;
   } else if (servo_reads_per_cycle_ > kServoCount) {
     servo_reads_per_cycle_ = kServoCount;
   }
+  if (servo_commands_per_cycle_ < 1) {
+    servo_commands_per_cycle_ = 1;
+  } else if (servo_commands_per_cycle_ > kServoCount) {
+    servo_commands_per_cycle_ = kServoCount;
+  }
   if (imu_reads_divider_ < 1) {
     imu_reads_divider_ = 1;
+  }
+  if (imu_angles_divider_ < 1) {
+    imu_angles_divider_ = 1;
   }
   if (servo_command_divider_ < 1) {
     servo_command_divider_ = 1;
@@ -299,14 +309,19 @@ UsbBridgeNode::UsbBridgeNode() : Node("usb_bridge_node") {
       this->get_logger(),
       "USB bridge servo feedback: reads_per_cycle=%d",
       servo_reads_per_cycle_);
-    RCLCPP_INFO(
+  RCLCPP_INFO(
       this->get_logger(),
       "USB bridge IMU polling: divider=%d",
       imu_reads_divider_);
-      RCLCPP_INFO(
-        this->get_logger(),
-        "USB bridge servo command rate: divider=%d",
-        servo_command_divider_);
+  RCLCPP_INFO(
+      this->get_logger(),
+      "USB bridge IMU angles polling: divider=%d",
+      imu_angles_divider_);
+  RCLCPP_INFO(
+      this->get_logger(),
+      "USB bridge servo command rate: divider=%d commands_per_cycle=%d",
+      servo_command_divider_,
+      servo_commands_per_cycle_);
 
   api_ = load_muto_api(so_path_);
   hw_ = reinterpret_cast<muto_handle*>(api_.create_usb(serial_port_.c_str(), baudrate_));
@@ -489,7 +504,8 @@ void UsbBridgeNode::run_rt_loop() {
     // 2) Emission des commandes sur les 18 servos (decimee pour limiter la charge serie).
     const bool do_servo_write = (cid % static_cast<uint64_t>(servo_command_divider_)) == 0ULL;
     if (do_servo_write) {
-      for (uint8_t i = 0; i < static_cast<uint8_t>(kServoCount); ++i) {
+      for (int n = 0; n < servo_commands_per_cycle_; ++n) {
+        const uint8_t i = static_cast<uint8_t>((static_cast<int>(next_servo_write_idx_) + n) % kServoCount);
         const float deg_f = std::clamp(commanded_angles_rad_[i] * static_cast<float>(180.0 / M_PI), -90.0F, 90.0F);
         const int16_t deg = static_cast<int16_t>(std::lround(deg_f));
         const int ret = api_.servo_move(hw_, static_cast<uint8_t>(i + 1), deg, servo_speed_);
@@ -498,6 +514,7 @@ void UsbBridgeNode::run_rt_loop() {
           ret_ok_this_cycle = false;
         }
       }
+      next_servo_write_idx_ = static_cast<uint8_t>((static_cast<int>(next_servo_write_idx_) + servo_commands_per_cycle_) % kServoCount);
     }
 
     // 3) Lecture des angles reels via muto_read_servo_angle_deg (round-robin pour limiter la latence).
@@ -527,18 +544,16 @@ void UsbBridgeNode::run_rt_loop() {
 
     // 5) Acquisition IMU brute + Euler depuis la C API (decimee pour limiter le blocage I/O).
     const bool do_imu_read = (cid % static_cast<uint64_t>(imu_reads_divider_)) == 0ULL;
+    const bool do_imu_angles_read = (cid % static_cast<uint64_t>(imu_angles_divider_)) == 0ULL;
     if (do_imu_read) {
-      muto_imu_angles ang{};
       muto_raw_imu_data raw{};
-      const int ret_ang = api_.get_imu_angles(hw_, &ang);
       const int ret_raw = api_.get_raw_imu(hw_, &raw);
-
-      if (ret_ang != 0 || ret_raw != 0) {
+      if (ret_raw != 0) {
         ret_ok_this_cycle = false;
         ++usb_error_count_;
         RCLCPP_WARN_THROTTLE(
             get_logger(), *get_clock(), 1000,
-            "[MONO %ld ns] imu read failed: %s",
+            "[MONO %ld ns] imu raw read failed: %s",
             t0, last_hw_error().c_str());
       } else {
         // 6) Conversion d'unites capteurs vers SI (rad/s, m/s2).
@@ -551,8 +566,8 @@ void UsbBridgeNode::run_rt_loop() {
 
         // 7) Conversion orientation Euler -> quaternion pour transport ROS standard.
         shared_.imu_quaternion = complementary_filter_.update(
-            ang.roll, ang.pitch, ang.yaw,
-            shared_.imu_gyro[0], shared_.imu_gyro[1], shared_.imu_gyro[2]);
+          last_imu_roll_deg_, last_imu_pitch_deg_, last_imu_yaw_deg_,
+          shared_.imu_gyro[0], shared_.imu_gyro[1], shared_.imu_gyro[2]);
 
         // 8) Calibration gyro sur les N premiers cycles au demarrage.
         if (cid < static_cast<uint64_t>(std::clamp(gyro_calib_cycles_, 1, 1000))) {
@@ -570,6 +585,22 @@ void UsbBridgeNode::run_rt_loop() {
           shared_.imu_gyro[1] -= gyro_offset_[1] / 16.4F * static_cast<float>(M_PI / 180.0);
           shared_.imu_gyro[2] -= gyro_offset_[2] / 16.4F * static_cast<float>(M_PI / 180.0);
         }
+      }
+    }
+    if (do_imu_angles_read) {
+      muto_imu_angles ang{};
+      const int ret_ang = api_.get_imu_angles(hw_, &ang);
+      if (ret_ang != 0) {
+        ret_ok_this_cycle = false;
+        ++usb_error_count_;
+        RCLCPP_WARN_THROTTLE(
+            get_logger(), *get_clock(), 1000,
+            "[MONO %ld ns] imu angles read failed: %s",
+            t0, last_hw_error().c_str());
+      } else {
+        last_imu_roll_deg_ = ang.roll;
+        last_imu_pitch_deg_ = ang.pitch;
+        last_imu_yaw_deg_ = ang.yaw;
       }
     }
 

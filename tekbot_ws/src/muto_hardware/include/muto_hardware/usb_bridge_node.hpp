@@ -210,8 +210,14 @@ private:
   double gyro_outlier_sigma_{3.0};  ///< Seuil statistique de rejet d'outliers (sigma).
   int servo_reads_per_cycle_{3};  ///< Nombre de lectures de feedback servo par cycle RT (round-robin).
   uint8_t next_servo_read_idx_{0};  ///< Index de depart pour la prochaine fenetre de lecture servo.
+  int servo_commands_per_cycle_{1};  ///< Nombre de commandes servo envoyees par cycle RT (round-robin).
+  uint8_t next_servo_write_idx_{0};  ///< Index de depart pour la prochaine fenetre de commande servo.
   int imu_reads_divider_{2};  ///< Lecture IMU tous les N cycles RT (1 = chaque cycle).
+  int imu_angles_divider_{8};  ///< Lecture angles Euler IMU tous les N cycles RT.
   int servo_command_divider_{2};  ///< Envoi commandes servo tous les N cycles RT (1 = chaque cycle).
+  float last_imu_roll_deg_{0.0F};  ///< Dernier roll IMU valide (degres).
+  float last_imu_pitch_deg_{0.0F};  ///< Dernier pitch IMU valide (degres).
+  float last_imu_yaw_deg_{0.0F};  ///< Dernier yaw IMU valide (degres).
 
   rclcpp::Time last_command_ros_time_;  ///< Date ROS de la derniere commande valide.
   ComplementaryFilter complementary_filter_;  ///< Filtre d'orientation (Euler -> quaternion).
