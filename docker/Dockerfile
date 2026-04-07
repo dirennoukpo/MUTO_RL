@@ -1,8 +1,9 @@
 FROM ros:humble-ros-base-jammy
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG USER_HOME=/home/pi
-ARG WORKING_DIR=/home/pi/TEKBOT_ROBOTICS
+ARG USER_HOME
+ARG WORKING_DIR
+
 ENV USER_HOME=${USER_HOME}
 ENV WORKING_DIR=${WORKING_DIR}
 
@@ -216,7 +217,6 @@ WORKDIR ${WORKING_DIR}
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc && \
     echo "if [ -f install/setup.bash ]; then source install/setup.bash; fi" >> ~/.bashrc && \
     echo "source $VENV_PATH/bin/activate" >> ~/.bashrc && \
-    echo "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" >> ~/.bashrc && \
     echo "export RCUTILS_COLORIZED_OUTPUT=1" >> ~/.bashrc
 
 # ────────────────────────────────────────────────────────────────

@@ -1,12 +1,72 @@
 #!/bin/bash
 set -e
 
+: "${WORKING_DIR:?WORKING_DIR must be set from env files}"
+: "${MUTO_LINK_CPP_REPO:?MUTO_LINK_CPP_REPO must be set from env files}"
+: "${MUTO_LINK_CPP_REF:?MUTO_LINK_CPP_REF must be set from env files}"
+
+WORKSPACE_DIR=$WORKING_DIR
+MUTO_LINK_CPP_DIR=$WORKSPACE_DIR/muto_link_cpp
+TEKBOT_WS_DIR=$WORKSPACE_DIR/tekbot_ws
+
+if [ -f /opt/tekbot_venv/bin/activate ]; then
+    source /opt/tekbot_venv/bin/activate
+fi
+
 # ────────────────────────────────────────────────────────────────
 # Source ROS 2
 # ────────────────────────────────────────────────────────────────
 source /opt/ros/humble/setup.bash
-if [ -f install/setup.bash ]; then
-    source install/setup.bash
+
+if [ -d "$WORKSPACE_DIR" ]; then
+    cd "$WORKSPACE_DIR"
+
+    if [ -d "$MUTO_LINK_CPP_DIR/.git" ]; then
+        echo "[entrypoint] Mise a jour de muto_link_cpp (git pull --ff-only)..."
+        if ! git -C "$MUTO_LINK_CPP_DIR" pull --ff-only origin "$MUTO_LINK_CPP_REF"; then
+            echo "[entrypoint] WARN: git pull muto_link_cpp echoue (conflit local ou branche absente)."
+        fi
+
+        echo "[entrypoint] Compilation de muto_link_cpp..."
+        cd "$MUTO_LINK_CPP_DIR"
+        mkdir -p build && cd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$WORKSPACE_DIR/muto_install" .. \
+            && cmake --build . --config Release \
+            && cmake --install . \
+            || echo "[entrypoint] WARN: compilation de muto_link_cpp echouee."
+        cd "$WORKSPACE_DIR"
+    fi
+
+    if [ ! -f "$MUTO_LINK_CPP_DIR/include/muto_link/c_api.h" ]; then
+        echo "[entrypoint] muto_link_cpp introuvable, clonage dans $MUTO_LINK_CPP_DIR..."
+        if ! git clone --depth 1 --branch "$MUTO_LINK_CPP_REF" "$MUTO_LINK_CPP_REPO" "$MUTO_LINK_CPP_DIR"; then
+            echo "[entrypoint] WARN: impossible de cloner muto_link_cpp."
+        else
+            echo "[entrypoint] Compilation de muto_link_cpp..."
+            cd "$MUTO_LINK_CPP_DIR"
+            mkdir -p build && cd build
+            cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$WORKSPACE_DIR/muto_install" .. \
+                && cmake --build . --config Release \
+                && cmake --install . \
+                || echo "[entrypoint] WARN: compilation de muto_link_cpp échouée."
+            cd "$WORKSPACE_DIR"
+        fi
+    fi
+
+    if [ -f "$MUTO_LINK_CPP_DIR/include/muto_link/c_api.h" ]; then
+        mkdir -p "$WORKSPACE_DIR/muto_install/include"
+        ln -sfn "$MUTO_LINK_CPP_DIR/include/muto_link" "$WORKSPACE_DIR/muto_install/include/muto_link"
+    else
+        echo "[entrypoint] WARN: c_api.h toujours introuvable, build muto_hardware risque d'echouer."
+    fi
+
+    if [ ! -f "$WORKSPACE_DIR/muto_install/lib/libmuto_link_cpp_lib.so" ]; then
+        echo "[entrypoint] WARN: libmuto_link_cpp_lib.so non trouvée, muto_hardware échouera au runtime."
+    fi
+
+    if [ -f "$TEKBOT_WS_DIR/install/setup.bash" ]; then
+        source "$TEKBOT_WS_DIR/install/setup.bash"
+    fi
 fi
 
 # ────────────────────────────────────────────────────────────────
@@ -30,9 +90,9 @@ if [ -n "$TS_AUTHKEY" ]; then
     echo "[entrypoint] Connexion Tailscale avec authkey..."
     tailscale up \
         --authkey="$TS_AUTHKEY" \
-        --hostname="${TS_HOSTNAME:-tekbot-ros-dev}" \
-        --accept-routes="${TS_ACCEPT_ROUTES:-false}" \
-        --advertise-exit-node="${TS_ADVERTISE_EXIT_NODE:-false}" \
+    --hostname="$TS_HOSTNAME" \
+    --accept-routes="$TS_ACCEPT_ROUTES" \
+    --advertise-exit-node="$TS_ADVERTISE_EXIT_NODE" \
         || echo "[entrypoint] WARN: tailscale up a échoué (déjà connecté ?)"
 else
     echo "[entrypoint] WARN: TS_AUTHKEY non défini — Tailscale en attente d'auth manuelle."

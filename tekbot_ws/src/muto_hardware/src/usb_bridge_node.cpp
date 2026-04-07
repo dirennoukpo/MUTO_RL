@@ -143,6 +143,21 @@
 
 namespace {
 
+std::string resolve_working_dir_token(const std::string& value, const std::string& working_dir) {
+  const std::string token = "$(env WORKING_DIR)";
+  if (value.find(token) == std::string::npos) {
+    return value;
+  }
+
+  std::string resolved = value;
+  std::string::size_type pos = 0;
+  while ((pos = resolved.find(token, pos)) != std::string::npos) {
+    resolved.replace(pos, token.size(), working_dir);
+    pos += working_dir.size();
+  }
+  return resolved;
+}
+
 // Charge dynamiquement la C API muto_link et echoue explicitement si un symbole manque.
 muto_hardware::MutoApi load_muto_api(const std::string& so_path) {
   muto_hardware::MutoApi api;
@@ -239,8 +254,19 @@ UsbBridgeNode::UsbBridgeNode() : Node("usb_bridge_node") {
         "Vérifiez docker/config/.env.raspberrypi est lancé (make run).");
     throw std::runtime_error("WORKING_DIR non défini");
   }
-  std::string default_so_path = std::string(working_dir) + "/muto_install/lib/libmuto_link_cpp_lib.so";
-  so_path_ = declare_parameter<std::string>("muto_lib_path", default_so_path);
+
+  const std::string working_dir_str(working_dir);
+  const std::string default_so_path = working_dir_str + "/muto_install/lib/libmuto_link_cpp_lib.so";
+  const std::string configured_so_path = declare_parameter<std::string>("muto_lib_path", default_so_path);
+  so_path_ = resolve_working_dir_token(configured_so_path, working_dir_str);
+
+  if (so_path_ != configured_so_path) {
+    RCLCPP_INFO(
+        this->get_logger(),
+        "muto_lib_path resolu depuis token WORKING_DIR: %s",
+        so_path_.c_str());
+  }
+
   serial_port_ = declare_parameter<std::string>("serial_port", "/dev/ttyUSB0");
   baudrate_ = declare_parameter<int>("baudrate", 115200);
   rt_core_ = declare_parameter<int>("rt_core", 3);

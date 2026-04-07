@@ -68,6 +68,25 @@
 #include <cstdlib>
 #include <fstream>
 
+namespace {
+
+std::string resolve_working_dir_token(const std::string& value, const std::string& working_dir) {
+  const std::string token = "$(env WORKING_DIR)";
+  if (value.find(token) == std::string::npos) {
+    return value;
+  }
+
+  std::string resolved = value;
+  std::string::size_type pos = 0;
+  while ((pos = resolved.find(token, pos)) != std::string::npos) {
+    resolved.replace(pos, token.size(), working_dir);
+    pos += working_dir.size();
+  }
+  return resolved;
+}
+
+}  // namespace
+
 namespace muto_hardware {
 
 // Initialise le noeud de gestion des modes et sa matrice de transitions explicite.
@@ -82,9 +101,19 @@ ModeManagerNode::ModeManagerNode() : Node("mode_manager_node") {
         "Vérifiez docker/config/.env.raspberrypi.");
     throw std::runtime_error("WORKING_DIR non défini");
   }
-  std::string default_model_card = std::string(working_dir) + "/models/model_card_v003.json";
-  model_card_path_ = declare_parameter<std::string>(
-      "model_card_path", default_model_card);
+
+  const std::string working_dir_str(working_dir);
+  const std::string default_model_card = working_dir_str + "/models/model_card_v003.json";
+  const std::string configured_model_card =
+      declare_parameter<std::string>("model_card_path", default_model_card);
+  model_card_path_ = resolve_working_dir_token(configured_model_card, working_dir_str);
+
+  if (model_card_path_ != configured_model_card) {
+    RCLCPP_INFO(
+        get_logger(),
+        "model_card_path resolu depuis token WORKING_DIR: %s",
+        model_card_path_.c_str());
+  }
 
   // Cette matrice formalise les transitions autorisees pour eviter tout saut d'etat implicite.
   transitions_ = {
