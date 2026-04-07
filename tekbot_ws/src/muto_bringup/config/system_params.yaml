@@ -103,8 +103,8 @@ mode_manager_node:
     # Source .env : WORKING_DIR dans docker/config/.env.raspberrypi
     # Contient les flags : sim_real_validated, dry_run_validated, etc.
     # Utilisé par le FSM pour valider les transitions d'état (INIT→IDLE→DRY_RUN→RL_ACTIVE).
-    # Copie locale synchronisée depuis la Jetson via le volume partagé.
-    model_card_path: "$(env WORKING_DIR)/models/model_card_v003.json"
+    # Copie locale versionnée dans le package muto_bringup (toujours présente dans ce workspace).
+    model_card_path: "$(env WORKING_DIR)/tekbot_ws/src/muto_bringup/data/model_card_v003.json"
 
 # ── JETSON NANO (ROBOT_ROLE=BRAIN) ───────────────────────────
 # Launch : src/muto_bringup/launch/jetson_full.launch.py

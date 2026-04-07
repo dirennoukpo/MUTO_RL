@@ -63,3 +63,5 @@ htmlcov/
 .settings/
 *.sublime-project
 *.sublime-workspace
+muto_link_cpp
+muto_install
