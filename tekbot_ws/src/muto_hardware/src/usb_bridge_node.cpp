@@ -276,6 +276,12 @@ UsbBridgeNode::UsbBridgeNode() : Node("usb_bridge_node") {
   gyro_calib_cycles_ = declare_parameter<int>("gyro_calib_cycles", 1000);
   gyro_outlier_sigma_ = declare_parameter<double>("gyro_outlier_sigma", 3.0);
 
+  RCLCPP_INFO(
+      this->get_logger(),
+      "USB bridge serial config: port=%s baudrate=%d",
+      serial_port_.c_str(),
+      baudrate_);
+
   api_ = load_muto_api(so_path_);
   hw_ = reinterpret_cast<muto_handle*>(api_.create_usb(serial_port_.c_str(), baudrate_));
   if (hw_ == nullptr) {

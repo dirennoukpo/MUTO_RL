@@ -48,7 +48,8 @@ usb_bridge_node:
     
     # baudrate : baudrate de communication Dynamixel (bits/s).
     # Doit correspondre au débit configuré dans les servos Dynamixel.
-    # Valeurs typiques : 115200 ou 1000000.
+    # Valeurs typiques : 115200 ou 460800 selon support adaptateur/carte.
+    # Basculé à 115200 pour alignement avec la configuration servo actuelle.
     baudrate: 115200
     
     # rt_core : CPU core dédié au thread temps réel (SCHED_FIFO, priorité 90).

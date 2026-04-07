@@ -133,16 +133,23 @@ public:
     /**
      * @brief Read the current angle of a servo.
      * 
-     * Queries the baseboard for the current position of the specified servo.
-     * Returns the angle as raw byte data that can be converted to degrees.
+      * Queries the baseboard for servo positions. The protocol returns one byte
+      * per servo (18 bytes total), even when a single servo_id is requested.
+      * Use readServoAngleDeg() to get a parsed angle for one servo.
      * 
      * @param servo_id The ID of the servo to read (1-18).
-     * @return std::vector<uint8_t> Raw angle data bytes from the baseboard.
+      * @return std::vector<uint8_t> Raw servo-angle bytes (index 0 => servo 1).
      * 
      * @throws std::invalid_argument if servo_id is out of valid range.
      * @throws std::runtime_error if the read operation fails.
      */
     std::vector<uint8_t> readServoAngle(uint8_t servo_id);
+     /**
+      * @brief Read and parse one servo angle in degrees.
+      *
+      * Extracts the requested servo byte from the 18-byte servo response and
+      * converts it from protocol domain to degrees.
+      */
     int16_t readServoAngleDeg(uint8_t servo_id);
     ServoState readServoState(uint8_t servo_id);
 

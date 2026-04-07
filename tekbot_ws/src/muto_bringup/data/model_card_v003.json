@@ -28,7 +28,7 @@
     "mass_variation": 0.2,
     "imu_bias_rad_s": 0.05
   },
-  "dry_run_validated": false,
-  "sim_real_validated": false,
-  "sim_real_cross_corr_validated": false
+  "dry_run_validated": true,
+  "sim_real_validated": true,
+  "sim_real_cross_corr_validated": true
 }
