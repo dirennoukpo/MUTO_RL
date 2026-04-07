@@ -66,6 +66,9 @@ WatchdogNode::WatchdogNode() : Node("watchdog_node") {
   command_timeout_ms_ = declare_parameter<double>("command_timeout_ms", 50.0);
   heartbeat_timeout_ms_ = declare_parameter<double>("heartbeat_timeout_ms", 500.0);
   fall_accel_threshold_ms2_ = declare_parameter<double>("fall_accel_threshold_ms2", 29.4);
+  require_dry_run_validation_ = declare_parameter<bool>("require_dry_run_validation", true);
+  require_commands_stream_ = declare_parameter<bool>("require_commands_stream", true);
+  require_heartbeat_stream_ = declare_parameter<bool>("require_heartbeat_stream", true);
 
   last_command_time_ = now();
   last_heartbeat_time_ = now();
@@ -150,15 +153,15 @@ void WatchdogNode::check_safety() {
   const auto dt_cmd_ms = (now() - last_command_time_).seconds() * 1000.0;
   const auto dt_hb_ms = (now() - last_heartbeat_time_).seconds() * 1000.0;
 
-  if (!dry_run_valid_.load(std::memory_order_acquire)) {
+  if (require_dry_run_validation_ && !dry_run_valid_.load(std::memory_order_acquire)) {
     publish_mode("SAFE", "dry_run_not_validated");
     return;
   }
-  if (dt_cmd_ms > command_timeout_ms_) {
+  if (require_commands_stream_ && dt_cmd_ms > command_timeout_ms_) {
     publish_mode("SAFE", "commands_timeout");
     return;
   }
-  if (dt_hb_ms > heartbeat_timeout_ms_) {
+  if (require_heartbeat_stream_ && dt_hb_ms > heartbeat_timeout_ms_) {
     publish_mode("SAFE", "heartbeat_timeout");
   }
 }

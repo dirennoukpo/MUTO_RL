@@ -57,6 +57,9 @@ private:
   double command_timeout_ms_{50.0};  ///< Timeout absence commande avant SAFE (ms).
   double heartbeat_timeout_ms_{500.0};  ///< Timeout heartbeat avant SAFE (ms).
   double fall_accel_threshold_ms2_{29.4};  ///< Seuil chute (3g) en m/s2.
+  bool require_dry_run_validation_{true};  ///< Exige un flux /commands_dry_run avant d'autoriser NORMAL.
+  bool require_commands_stream_{true};  ///< Exige un flux /commands frais avant d'autoriser NORMAL.
+  bool require_heartbeat_stream_{true};  ///< Exige un heartbeat Jetson frais avant d'autoriser NORMAL.
   std::atomic<bool> dry_run_valid_{false};  ///< Vrai si le flux dry_run est effectivement observe.
 
   rclcpp::Subscription<muto_msgs::msg::Commands>::SharedPtr command_sub_;

@@ -275,12 +275,38 @@ UsbBridgeNode::UsbBridgeNode() : Node("usb_bridge_node") {
   command_age_max_ms_ = declare_parameter<double>("command_age_max_ms", 20.0);
   gyro_calib_cycles_ = declare_parameter<int>("gyro_calib_cycles", 1000);
   gyro_outlier_sigma_ = declare_parameter<double>("gyro_outlier_sigma", 3.0);
+  servo_reads_per_cycle_ = declare_parameter<int>("servo_reads_per_cycle", 3);
+  imu_reads_divider_ = declare_parameter<int>("imu_reads_divider", 2);
+  servo_command_divider_ = declare_parameter<int>("servo_command_divider", 2);
+  if (servo_reads_per_cycle_ < 1) {
+    servo_reads_per_cycle_ = 1;
+  } else if (servo_reads_per_cycle_ > kServoCount) {
+    servo_reads_per_cycle_ = kServoCount;
+  }
+  if (imu_reads_divider_ < 1) {
+    imu_reads_divider_ = 1;
+  }
+  if (servo_command_divider_ < 1) {
+    servo_command_divider_ = 1;
+  }
 
   RCLCPP_INFO(
       this->get_logger(),
       "USB bridge serial config: port=%s baudrate=%d",
       serial_port_.c_str(),
       baudrate_);
+  RCLCPP_INFO(
+      this->get_logger(),
+      "USB bridge servo feedback: reads_per_cycle=%d",
+      servo_reads_per_cycle_);
+    RCLCPP_INFO(
+      this->get_logger(),
+      "USB bridge IMU polling: divider=%d",
+      imu_reads_divider_);
+      RCLCPP_INFO(
+        this->get_logger(),
+        "USB bridge servo command rate: divider=%d",
+        servo_command_divider_);
 
   api_ = load_muto_api(so_path_);
   hw_ = reinterpret_cast<muto_handle*>(api_.create_usb(serial_port_.c_str(), baudrate_));
@@ -460,19 +486,23 @@ void UsbBridgeNode::run_rt_loop() {
     const int64_t t0 = static_cast<int64_t>(now_mono_ns());
     bool ret_ok_this_cycle = true;
 
-    // 2) Emission des commandes sur les 18 servos (rad -> deg, puis clamp securite).
-    for (uint8_t i = 0; i < static_cast<uint8_t>(kServoCount); ++i) {
-      const float deg_f = std::clamp(commanded_angles_rad_[i] * static_cast<float>(180.0 / M_PI), -90.0F, 90.0F);
-      const int16_t deg = static_cast<int16_t>(std::lround(deg_f));
-      const int ret = api_.servo_move(hw_, static_cast<uint8_t>(i + 1), deg, servo_speed_);
-      if (ret != 0) {
-        ++usb_error_count_;
-        ret_ok_this_cycle = false;
+    // 2) Emission des commandes sur les 18 servos (decimee pour limiter la charge serie).
+    const bool do_servo_write = (cid % static_cast<uint64_t>(servo_command_divider_)) == 0ULL;
+    if (do_servo_write) {
+      for (uint8_t i = 0; i < static_cast<uint8_t>(kServoCount); ++i) {
+        const float deg_f = std::clamp(commanded_angles_rad_[i] * static_cast<float>(180.0 / M_PI), -90.0F, 90.0F);
+        const int16_t deg = static_cast<int16_t>(std::lround(deg_f));
+        const int ret = api_.servo_move(hw_, static_cast<uint8_t>(i + 1), deg, servo_speed_);
+        if (ret != 0) {
+          ++usb_error_count_;
+          ret_ok_this_cycle = false;
+        }
       }
     }
 
-    // 3) Lecture des angles reels via muto_read_servo_angle_deg (source de verite mecanique).
-    for (uint8_t i = 0; i < static_cast<uint8_t>(kServoCount); ++i) {
+    // 3) Lecture des angles reels via muto_read_servo_angle_deg (round-robin pour limiter la latence).
+    for (int n = 0; n < servo_reads_per_cycle_; ++n) {
+      const uint8_t i = static_cast<uint8_t>((static_cast<int>(next_servo_read_idx_) + n) % kServoCount);
       int16_t raw_deg = 0;
       const int ret = api_.read_servo_angle_deg(hw_, static_cast<uint8_t>(i + 1), &raw_deg);
       if (ret == 0) {
@@ -486,6 +516,7 @@ void UsbBridgeNode::run_rt_loop() {
             t0, static_cast<int>(i + 1), last_hw_error().c_str());
       }
     }
+    next_servo_read_idx_ = static_cast<uint8_t>((static_cast<int>(next_servo_read_idx_) + servo_reads_per_cycle_) % kServoCount);
 
     // 4) Estimation vitesse par difference finie (dt fixe = 5 ms).
     for (int i = 0; i < kServoCount; ++i) {
@@ -494,44 +525,52 @@ void UsbBridgeNode::run_rt_loop() {
       prev_measured_angles_[static_cast<size_t>(i)] = shared_.measured_angles[static_cast<size_t>(i)];
     }
 
-    // 5) Acquisition IMU brute + Euler depuis la C API.
-    muto_imu_angles ang{};
-    muto_raw_imu_data raw{};
-    if (api_.get_imu_angles(hw_, &ang) != 0) {
-      ret_ok_this_cycle = false;
-    }
-    if (api_.get_raw_imu(hw_, &raw) != 0) {
-      ret_ok_this_cycle = false;
-    }
+    // 5) Acquisition IMU brute + Euler depuis la C API (decimee pour limiter le blocage I/O).
+    const bool do_imu_read = (cid % static_cast<uint64_t>(imu_reads_divider_)) == 0ULL;
+    if (do_imu_read) {
+      muto_imu_angles ang{};
+      muto_raw_imu_data raw{};
+      const int ret_ang = api_.get_imu_angles(hw_, &ang);
+      const int ret_raw = api_.get_raw_imu(hw_, &raw);
 
-    // 6) Conversion d'unites capteurs vers SI (rad/s, m/s2).
-    shared_.imu_gyro[0] = static_cast<float>(static_cast<int16_t>(raw.gyro_x)) / 16.4F * static_cast<float>(M_PI / 180.0);
-    shared_.imu_gyro[1] = static_cast<float>(static_cast<int16_t>(raw.gyro_y)) / 16.4F * static_cast<float>(M_PI / 180.0);
-    shared_.imu_gyro[2] = static_cast<float>(static_cast<int16_t>(raw.gyro_z)) / 16.4F * static_cast<float>(M_PI / 180.0);
-    shared_.imu_accel[0] = static_cast<float>(static_cast<int16_t>(raw.accel_x)) / 8192.0F * 9.80665F;
-    shared_.imu_accel[1] = static_cast<float>(static_cast<int16_t>(raw.accel_y)) / 8192.0F * 9.80665F;
-    shared_.imu_accel[2] = static_cast<float>(static_cast<int16_t>(raw.accel_z)) / 8192.0F * 9.80665F;
+      if (ret_ang != 0 || ret_raw != 0) {
+        ret_ok_this_cycle = false;
+        ++usb_error_count_;
+        RCLCPP_WARN_THROTTLE(
+            get_logger(), *get_clock(), 1000,
+            "[MONO %ld ns] imu read failed: %s",
+            t0, last_hw_error().c_str());
+      } else {
+        // 6) Conversion d'unites capteurs vers SI (rad/s, m/s2).
+        shared_.imu_gyro[0] = static_cast<float>(static_cast<int16_t>(raw.gyro_x)) / 16.4F * static_cast<float>(M_PI / 180.0);
+        shared_.imu_gyro[1] = static_cast<float>(static_cast<int16_t>(raw.gyro_y)) / 16.4F * static_cast<float>(M_PI / 180.0);
+        shared_.imu_gyro[2] = static_cast<float>(static_cast<int16_t>(raw.gyro_z)) / 16.4F * static_cast<float>(M_PI / 180.0);
+        shared_.imu_accel[0] = static_cast<float>(static_cast<int16_t>(raw.accel_x)) / 8192.0F * 9.80665F;
+        shared_.imu_accel[1] = static_cast<float>(static_cast<int16_t>(raw.accel_y)) / 8192.0F * 9.80665F;
+        shared_.imu_accel[2] = static_cast<float>(static_cast<int16_t>(raw.accel_z)) / 8192.0F * 9.80665F;
 
-    // 7) Conversion orientation Euler -> quaternion pour transport ROS standard.
-    shared_.imu_quaternion = complementary_filter_.update(
-        ang.roll, ang.pitch, ang.yaw,
-        shared_.imu_gyro[0], shared_.imu_gyro[1], shared_.imu_gyro[2]);
+        // 7) Conversion orientation Euler -> quaternion pour transport ROS standard.
+        shared_.imu_quaternion = complementary_filter_.update(
+            ang.roll, ang.pitch, ang.yaw,
+            shared_.imu_gyro[0], shared_.imu_gyro[1], shared_.imu_gyro[2]);
 
-    // 8) Calibration gyro sur les N premiers cycles au demarrage.
-    if (cid < static_cast<uint64_t>(std::clamp(gyro_calib_cycles_, 1, 1000))) {
-      const size_t idx = static_cast<size_t>(cid);
-      gyro_calib_buf_[idx][0] = static_cast<int16_t>(raw.gyro_x);
-      gyro_calib_buf_[idx][1] = static_cast<int16_t>(raw.gyro_y);
-      gyro_calib_buf_[idx][2] = static_cast<int16_t>(raw.gyro_z);
-      if (idx + 1 == static_cast<size_t>(std::clamp(gyro_calib_cycles_, 1, 1000))) {
-        compute_gyro_offset_reject_outliers();
-        calibration_done_ = true;
+        // 8) Calibration gyro sur les N premiers cycles au demarrage.
+        if (cid < static_cast<uint64_t>(std::clamp(gyro_calib_cycles_, 1, 1000))) {
+          const size_t idx = static_cast<size_t>(cid);
+          gyro_calib_buf_[idx][0] = static_cast<int16_t>(raw.gyro_x);
+          gyro_calib_buf_[idx][1] = static_cast<int16_t>(raw.gyro_y);
+          gyro_calib_buf_[idx][2] = static_cast<int16_t>(raw.gyro_z);
+          if (idx + 1 == static_cast<size_t>(std::clamp(gyro_calib_cycles_, 1, 1000))) {
+            compute_gyro_offset_reject_outliers();
+            calibration_done_ = true;
+          }
+        }
+        if (calibration_done_) {
+          shared_.imu_gyro[0] -= gyro_offset_[0] / 16.4F * static_cast<float>(M_PI / 180.0);
+          shared_.imu_gyro[1] -= gyro_offset_[1] / 16.4F * static_cast<float>(M_PI / 180.0);
+          shared_.imu_gyro[2] -= gyro_offset_[2] / 16.4F * static_cast<float>(M_PI / 180.0);
+        }
       }
-    }
-    if (calibration_done_) {
-      shared_.imu_gyro[0] -= gyro_offset_[0] / 16.4F * static_cast<float>(M_PI / 180.0);
-      shared_.imu_gyro[1] -= gyro_offset_[1] / 16.4F * static_cast<float>(M_PI / 180.0);
-      shared_.imu_gyro[2] -= gyro_offset_[2] / 16.4F * static_cast<float>(M_PI / 180.0);
     }
 
     // 9) Heuristique force de contact derivee de l'axe Z IMU.

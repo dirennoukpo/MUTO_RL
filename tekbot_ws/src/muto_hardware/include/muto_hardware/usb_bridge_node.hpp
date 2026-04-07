@@ -208,6 +208,10 @@ private:
   double command_age_max_ms_{20.0};  ///< Age max commande acceptee, en millisecondes.
   int gyro_calib_cycles_{1000};  ///< Taille calibration gyro en cycles initiaux.
   double gyro_outlier_sigma_{3.0};  ///< Seuil statistique de rejet d'outliers (sigma).
+  int servo_reads_per_cycle_{3};  ///< Nombre de lectures de feedback servo par cycle RT (round-robin).
+  uint8_t next_servo_read_idx_{0};  ///< Index de depart pour la prochaine fenetre de lecture servo.
+  int imu_reads_divider_{2};  ///< Lecture IMU tous les N cycles RT (1 = chaque cycle).
+  int servo_command_divider_{2};  ///< Envoi commandes servo tous les N cycles RT (1 = chaque cycle).
 
   rclcpp::Time last_command_ros_time_;  ///< Date ROS de la derniere commande valide.
   ComplementaryFilter complementary_filter_;  ///< Filtre d'orientation (Euler -> quaternion).

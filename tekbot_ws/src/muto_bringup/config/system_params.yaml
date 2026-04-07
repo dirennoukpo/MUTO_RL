@@ -64,7 +64,8 @@ usb_bridge_node:
     # jitter_threshold_ms : seuil d'alerte pour le jitter temporel (millisecondes).
     # Si le délai entre lectures IMU/joints dépasse ce seuil → alerte publiée sur /hw/timing_jitter
     # Typique pour RT sur Pi avec isolcpus : 5-10 ms.
-    jitter_threshold_ms: 5.5
+    # En mode bench USB (sans chaine complete), augmenter ce seuil evite un spam inutile.
+    jitter_threshold_ms: 30.0
     
     # command_age_max_ms : âge maximal d'une commande avant expiration.
     # Si une commande est plus ancienne que cet âge → watchdog déclenche fallback sécurisé.
@@ -77,6 +78,18 @@ usb_bridge_node:
     # gyro_outlier_sigma : seuil d'écart-type pour éliminer les outliers IMU.
     # Valeurs > 3σ sont rejetées du filtre complémentaire.
     gyro_outlier_sigma: 3.0
+
+    # servo_reads_per_cycle : nombre de retours servo lus a chaque cycle RT (round-robin).
+    # Plus faible = jitter plus bas, mais feedback complet des 18 servos moins frequent.
+    servo_reads_per_cycle: 1
+
+    # imu_reads_divider : lecture IMU tous les N cycles RT (1 = chaque cycle).
+    # Augmenter cette valeur reduit le blocage serie et le jitter.
+    imu_reads_divider: 4
+
+    # servo_command_divider : envoi des commandes servo tous les N cycles RT.
+    # A 200 Hz, valeur 2 => 100 Hz de commande, compatible avec /commands.
+    servo_command_divider: 2
 
 watchdog_node:
   ros__parameters:
@@ -91,6 +104,18 @@ watchdog_node:
     # heartbeat_timeout_ms : timeout pour détection de perte de communication Pi↔Jetson.
     # Si aucun heartbeat reçu sur /heartbeat pendant ce délai → fallback sécurisé.
     heartbeat_timeout_ms: 500.0
+
+    # require_dry_run_validation : impose une trame recente sur /commands_dry_run avant mode normal.
+    # Mettre false en mode bench Pi seul pour eviter SAFE permanent.
+    require_dry_run_validation: false
+
+    # require_commands_stream : impose un flux /commands frais avant mode normal.
+    # Mettre false en bench Pi seul (sans Jetson/commande) pour eviter commands_timeout.
+    require_commands_stream: false
+
+    # require_heartbeat_stream : impose un heartbeat Jetson frais avant mode normal.
+    # Mettre false en bench Pi seul pour eviter heartbeat_timeout.
+    require_heartbeat_stream: false
     
     # fall_accel_threshold_ms2 : seuil d'accélération (m/s²) pour détection de chute.
     # Si accélération totale dépasse ce seuil → emergency stop.
