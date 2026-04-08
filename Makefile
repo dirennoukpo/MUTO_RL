@@ -1,5 +1,6 @@
 ENV_DIR = docker/config
 USER_NAME := $(shell whoami)
+HOSTNAME_HINT := $(shell hostname 2>/dev/null | tr '[:upper:]' '[:lower:]')
 BASE_ENV = .env.base
 PI_ENV = .env.raspberrypi
 JETSON_ENV = .env.jetson_nano
@@ -11,16 +12,19 @@ CUSTOM_ENV_FILES = $(filter-out $(IGNORED_ENV_FILES),$(ALL_ENV_FILES))
 CUSTOM_ENV = $(firstword $(CUSTOM_ENV_FILES))
 REQUIRED_ENVS = $(BASE_ENV) $(PI_ENV) $(JETSON_ENV) $(DEFAULT_ENV)
 
-ifeq ($(USER_NAME),jetson)
-PROFILE ?= $(JETSON_ENV)
-else ifeq ($(USER_NAME),pi)
-PROFILE ?= $(PI_ENV)
+PROFILE ?=
+ifeq ($(strip $(PROFILE)),)
+ifneq (,$(findstring jetson,$(HOSTNAME_HINT)))
+PROFILE := $(JETSON_ENV)
+else ifneq (,$(findstring pi,$(HOSTNAME_HINT)))
+PROFILE := $(PI_ENV)
 else ifneq (,$(wildcard $(ENV_DIR)/$(USER_ENV)))
-PROFILE ?= $(USER_ENV)
-else ifneq ($(strip $(CUSTOM_ENV)),)
-PROFILE ?= $(CUSTOM_ENV)
+PROFILE := $(USER_ENV)
+else ifneq (,$(strip $(CUSTOM_ENV)))
+PROFILE := $(CUSTOM_ENV)
 else
-PROFILE ?= $(DEFAULT_ENV)
+PROFILE := $(DEFAULT_ENV)
+endif
 endif
 
 # Récupération dynamique du nom du container depuis le .env choisi
@@ -58,6 +62,7 @@ validate-envs:
 # Cibles
 status: validate-envs
 	@echo "User: $(USER_NAME)"
+	@echo "Hostname: $(HOSTNAME_HINT)"
 	@echo "Base: $(ENV_DIR)/$(BASE_ENV)"
 	@echo "Profile: $(ENV_DIR)/$(PROFILE)"
 	@echo "Required: $(ENV_DIR)/$(BASE_ENV), $(ENV_DIR)/$(PI_ENV), $(ENV_DIR)/$(JETSON_ENV), $(ENV_DIR)/$(DEFAULT_ENV)"
