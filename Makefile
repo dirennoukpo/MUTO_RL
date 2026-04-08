@@ -14,7 +14,11 @@ REQUIRED_ENVS = $(BASE_ENV) $(PI_ENV) $(JETSON_ENV) $(DEFAULT_ENV)
 
 PROFILE ?=
 ifeq ($(strip $(PROFILE)),)
-ifneq (,$(findstring jetson,$(HOSTNAME_HINT)))
+ifeq ($(USER_NAME),jetson)
+PROFILE := $(JETSON_ENV)
+else ifeq ($(USER_NAME),pi)
+PROFILE := $(PI_ENV)
+else ifneq (,$(findstring jetson,$(HOSTNAME_HINT)))
 PROFILE := $(JETSON_ENV)
 else ifneq (,$(findstring pi,$(HOSTNAME_HINT)))
 PROFILE := $(PI_ENV)
