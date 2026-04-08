@@ -9,6 +9,7 @@ Maintenance: toute evolution doit conserver la compatibilite des topics, service
 #!/usr/bin/env python3
 import argparse
 import math
+import os
 import sys
 import time
 from typing import List
@@ -95,6 +96,11 @@ def main() -> int:
     args = parser.parse_args()
 
     rep = Reporter()
+    role = os.environ.get("ROBOT_ROLE", "").upper()
+    if role and role != "BRAIN":
+        rep.warn(f"SKIP test_safety_filter: ROBOT_ROLE={role}, test reserve Jetson/BRAIN")
+        return 0
+
     rclpy.init()
     node = SafetyProbe()
 

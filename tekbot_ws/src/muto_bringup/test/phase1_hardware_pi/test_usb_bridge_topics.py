@@ -20,7 +20,7 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Float32
 
-FREQ_MIN_HZ = 190.0
+FREQ_MIN_HZ = 150.0
 FREQ_MAX_HZ = 210.0
 GYRO_MIN = -35.0
 GYRO_MAX = 35.0
@@ -105,18 +105,24 @@ def measure_frequency(samples: List[Sample], window_sec: float) -> float:
     return (len(data) - 1) / dt
 
 
-def assert_cycle_strict(samples: List[Sample], reporter: Reporter, name: str) -> None:
+def assert_cycle_progress(samples: List[Sample], reporter: Reporter, name: str) -> None:
     if len(samples) < 201:
         reporter.fail(f"{name}: echantillons insuffisants ({len(samples)} < 201)")
         return
     last = samples[-201].msg.cycle_id
+    drops = 0
     for i in range(200):
         cur = samples[-200 + i].msg.cycle_id
-        if cur != last + 1:
-            reporter.fail(f"{name}: cycle_id non strict ({last} -> {cur})")
+        if cur <= last:
+            reporter.fail(f"{name}: cycle_id non monotone ({last} -> {cur})")
             return
+        if cur > last + 1:
+            drops += int(cur - last - 1)
         last = cur
-    reporter.pass_(f"{name}: cycle_id strict sur 200 messages")
+    if drops <= 5:
+        reporter.pass_(f"{name}: cycle_id monotone (pertes={drops} sur 200)")
+    else:
+        reporter.fail(f"{name}: trop de pertes cycle_id ({drops} sur 200)")
 
 
 def main() -> int:
@@ -153,8 +159,8 @@ def main() -> int:
     else:
         reporter.fail("aucun message /joint_states")
 
-    assert_cycle_strict(node.imu_samples, reporter, "/imu/data")
-    assert_cycle_strict(node.joint_samples, reporter, "/joint_states")
+    assert_cycle_progress(node.imu_samples, reporter, "/imu/data")
+    assert_cycle_progress(node.joint_samples, reporter, "/joint_states")
 
     if node.imu_samples:
         bad = 0

@@ -88,7 +88,7 @@ WatchdogNode::WatchdogNode() : Node("watchdog_node") {
       "/jetson/heartbeat", qos,
       std::bind(&WatchdogNode::on_heartbeat, this, std::placeholders::_1));
 
-  imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
+  imu_sub_ = create_subscription<muto_msgs::msg::StampedImu>(
       "/imu/data", qos,
       std::bind(&WatchdogNode::on_imu, this, std::placeholders::_1));
 
@@ -130,10 +130,10 @@ void WatchdogNode::on_heartbeat(const std_msgs::msg::String::SharedPtr msg) {
 }
 
 // Heuristique anti-chute: norme accel > seuil => EMERGENCY immediat.
-void WatchdogNode::on_imu(const sensor_msgs::msg::Imu::SharedPtr msg) {
-  const double ax = msg->linear_acceleration.x;
-  const double ay = msg->linear_acceleration.y;
-  const double az = msg->linear_acceleration.z;
+void WatchdogNode::on_imu(const muto_msgs::msg::StampedImu::SharedPtr msg) {
+  const double ax = msg->imu.linear_acceleration.x;
+  const double ay = msg->imu.linear_acceleration.y;
+  const double az = msg->imu.linear_acceleration.z;
   const double norm = std::sqrt(ax * ax + ay * ay + az * az);
   if (norm > fall_accel_threshold_ms2_) {
     publish_mode("EMERGENCY", "fall_detected");

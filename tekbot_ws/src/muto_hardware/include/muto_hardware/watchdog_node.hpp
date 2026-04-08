@@ -18,9 +18,9 @@
 #include <atomic>
 
 #include "rclcpp/rclcpp.hpp"
-#include "sensor_msgs/msg/imu.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "muto_msgs/msg/commands.hpp"
+#include "muto_msgs/msg/stamped_imu.hpp"
 
 namespace muto_hardware {
 
@@ -41,7 +41,7 @@ private:
   /** @brief Callback /jetson/heartbeat : met a jour la derniere preuve de vie Jetson. */
   void on_heartbeat(const std_msgs::msg::String::SharedPtr msg);
   /** @brief Callback /imu/data : declenche EMERGENCY si norme accel > seuil de chute. */
-  void on_imu(const sensor_msgs::msg::Imu::SharedPtr msg);
+  void on_imu(const muto_msgs::msg::StampedImu::SharedPtr msg);
   /** @brief Evaluation periodique des timeout et publication de mode degrade. */
   void check_safety();
   /** @brief QoS critique coherent avec les flux best_effort + volatile + keep_last(1). */
@@ -65,7 +65,7 @@ private:
   rclcpp::Subscription<muto_msgs::msg::Commands>::SharedPtr command_sub_;
   rclcpp::Subscription<muto_msgs::msg::Commands>::SharedPtr dry_run_sub_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr heartbeat_sub_;
-  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
+  rclcpp::Subscription<muto_msgs::msg::StampedImu>::SharedPtr imu_sub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr mode_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
 };
