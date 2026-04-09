@@ -8,6 +8,8 @@ set -e
 WORKSPACE_DIR=$WORKING_DIR
 MUTO_LINK_CPP_DIR=$WORKSPACE_DIR/muto_link_cpp
 TEKBOT_WS_DIR=$WORKSPACE_DIR/tekbot_ws
+OLED_SCRIPT=$WORKSPACE_DIR/yahboom_oled.py
+START_YAHBOOM_OLED=${START_YAHBOOM_OLED:-true}
 
 if [ -f /opt/tekbot_venv/bin/activate ]; then
     source /opt/tekbot_venv/bin/activate
@@ -64,9 +66,52 @@ if [ -d "$WORKSPACE_DIR" ]; then
         echo "[entrypoint] WARN: libmuto_link_cpp_lib.so non trouvée, muto_hardware échouera au runtime."
     fi
 
-    if [ -f "$TEKBOT_WS_DIR/install/setup.bash" ]; then
-        source "$TEKBOT_WS_DIR/install/setup.bash"
+    if [ -d "$TEKBOT_WS_DIR" ]; then
+        echo "[entrypoint] Préparation de tekbot_ws..."
+        cd "$TEKBOT_WS_DIR"
+
+        if [ -d "$TEKBOT_WS_DIR/src" ]; then
+            echo "[entrypoint] Build de tekbot_ws (colcon build)..."
+            if ! colcon build --symlink-install; then
+                echo "[entrypoint] WARN: build tekbot_ws échoué."
+            fi
+        else
+            echo "[entrypoint] WARN: dossier src introuvable dans tekbot_ws, build ignoré."
+        fi
+
+        if [ -f "$TEKBOT_WS_DIR/install/setup.bash" ]; then
+            echo "[entrypoint] Sourcing de tekbot_ws/install/setup.bash"
+            source "$TEKBOT_WS_DIR/install/setup.bash"
+        elif [ -f "$TEKBOT_WS_DIR/install/local_setup.bash" ]; then
+            echo "[entrypoint] Sourcing de tekbot_ws/install/local_setup.bash"
+            source "$TEKBOT_WS_DIR/install/local_setup.bash"
+        else
+            echo "[entrypoint] WARN: aucun setup bash trouvé dans tekbot_ws/install."
+        fi
+
+        cd "$WORKSPACE_DIR"
+    else
+        echo "[entrypoint] WARN: tekbot_ws introuvable dans $TEKBOT_WS_DIR"
     fi
+fi
+
+# ────────────────────────────────────────────────────────────────
+# OLED Yahboom — lancement automatique optionnel
+# ────────────────────────────────────────────────────────────────
+if [ "$START_YAHBOOM_OLED" = "true" ]; then
+    if [ -f "$OLED_SCRIPT" ]; then
+        if pgrep -f "[p]ython3 .*yahboom_oled.py" >/dev/null 2>&1; then
+            echo "[entrypoint] yahboom_oled.py déjà en cours d'exécution."
+        else
+            echo "[entrypoint] Lancement de yahboom_oled.py en arrière-plan..."
+            python3 "$OLED_SCRIPT" >/tmp/yahboom_oled.log 2>&1 &
+            echo "[entrypoint] yahboom_oled.py PID=$! (logs: /tmp/yahboom_oled.log)"
+        fi
+    else
+        echo "[entrypoint] WARN: script OLED introuvable: $OLED_SCRIPT"
+    fi
+else
+    echo "[entrypoint] START_YAHBOOM_OLED=false, lancement OLED ignoré."
 fi
 
 # ────────────────────────────────────────────────────────────────

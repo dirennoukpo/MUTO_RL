@@ -190,6 +190,9 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 # empy 3.3.4 OBLIGATOIRE pour colcon/ament Humble
 RUN pip install --no-cache-dir \
     "empy==3.3.4" \
+    Adafruit-SSD1306 \
+    Adafruit-GPIO \
+    Pillow \
     pytest-repeat \
     pytest-rerunfailures \
     catkin-pkg \
@@ -218,7 +221,7 @@ RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc && \
     echo "export RCUTILS_COLORIZED_OUTPUT=1" >> ~/.bashrc
 
 # ────────────────────────────────────────────────────────────────
-# 17. Script d'entrée
+# 17. Script d'entree
 # ────────────────────────────────────────────────────────────────
 COPY ./docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
