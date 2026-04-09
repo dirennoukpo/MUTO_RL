@@ -25,7 +25,7 @@ load_env_file() {
 PROFILE_FILE=""
 HOST_LOWER="$(hostname 2>/dev/null | tr '[:upper:]' '[:lower:]')"
 
-if [[ "$HOST_LOWER" == *"jetson"* ]] && [ -f "$ENV_DIR/.env.jetson_nano" ]; then
+if [[ "$HOST_LOWER" == *"jetson"* || "$HOST_LOWER" == *"yahboom"* ]] && [ -f "$ENV_DIR/.env.jetson_nano" ]; then
 	PROFILE_FILE="$ENV_DIR/.env.jetson_nano"
 elif [[ "$HOST_LOWER" == *"pi"* ]] && [ -f "$ENV_DIR/.env.raspberrypi" ]; then
 	PROFILE_FILE="$ENV_DIR/.env.raspberrypi"
