@@ -88,19 +88,27 @@ usb_bridge_node:
 
     # servo_commands_per_cycle : nombre de commandes servo envoyees par cycle RT (round-robin).
     # Valeur faible evite les rafales de 18 ecritures d'un coup sur le bus serie.
-    servo_commands_per_cycle: 1
+    # servo_commands_per_cycle: 10
+    servo_commands_per_cycle: 9
+    # servo_commands_per_cycle: 1
 
     # imu_reads_divider : lecture IMU tous les N cycles RT (1 = chaque cycle).
     # Augmenter cette valeur reduit le blocage serie et le jitter.
-    imu_reads_divider: 8
+    imu_reads_divider: 1
+    # imu_reads_divider: 2
+    # imu_reads_divider: 8
 
     # imu_angles_divider : lecture Euler IMU tous les N cycles RT.
     # Decouple de l'IMU raw pour limiter les collisions de lecture sur le bus.
-    imu_angles_divider: 16
+    imu_angles_divider: 2
+    # imu_angles_divider: 4
+    # imu_angles_divider: 16
 
     # servo_command_divider : envoi des commandes servo tous les N cycles RT.
     # A 200 Hz, valeur 4 => 50 Hz de commande, mode bench stable.
-    servo_command_divider: 4
+    servo_command_divider: 1
+    # servo_command_divider: 2
+    # servo_command_divider: 4
 
 watchdog_node:
   ros__parameters:
