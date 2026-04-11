@@ -39,3 +39,4 @@ sudo nmcli con up static-eth0
 ip addr show eth0
 git clone https://github.com/dirennoukpo/MUTO_RL.git
 cd MUTO_RL/
+sudo nano /etc/ssh/sshd_config
