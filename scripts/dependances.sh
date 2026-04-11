@@ -20,5 +20,22 @@ source venv/bin/activate
 pip3 install Adafruit-SSD1306 Adafruit-GPIO Pillow
 # python3 yahboom_oled.py
 deactivate
+# Vérifier le nom de l’interface réseau
+nmcli device status
+
+# Ajouter une nouvelle connexion Ethernet avec IP statique
+sudo nmcli con add type ethernet ifname eth0 con-name static-eth0 ipv4.addresses 10.0.0.1/24 ipv4.method manual
+
+# (Optionnel) Ajouter une passerelle si nécessaire
+sudo nmcli con mod static-eth0 ipv4.gateway 10.0.0.254
+
+# (Optionnel) Ajouter des serveurs DNS
+sudo nmcli con mod static-eth0 ipv4.dns "8.8.8.8 8.8.4.4"
+
+# Activer la connexion
+sudo nmcli con up static-eth0
+
+# Vérifier que l’adresse est bien appliquée
+ip addr show eth0
 git clone https://github.com/dirennoukpo/MUTO_RL.git
 cd MUTO_RL/
