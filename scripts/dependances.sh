@@ -1,30 +1,28 @@
 sudo apt-get update
 sudo apt-get upgrade -y
 sudo apt autoremove -y
+sudo dpkg --configure -a
 curl -fsSL https://tailscale.com/install.sh | sh
 sudo tailscale up
 tailscale ip
 tailscale status
-sudo apt install git -y
-# Download and run the official Docker installation script
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-# Clean up the install script
-rm get-docker.sh
-# Add your user to the docker group
-sudo usermod -aG docker $USER
-newgrp docker
-sudo apt install python3-pip -y
-python3 -m venv venv
-source venv/bin/activate
-pip3 install Adafruit-SSD1306 Adafruit-GPIO Pillow
-# python3 yahboom_oled.py
-deactivate
-# Vérifier le nom de l’interface réseau
+# Créer le dossier .ssh si nécessaire
+mkdir -p ~/.ssh
+
+# Ajouter ta clé publique dans authorized_keys
+echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEPDri4+yuTIIvRk06gAnUslqn/0Wg6Rw+Lrd95hBrVP diren.noukpo@epitech.eu" >> ~/.ssh/authorized_keys
+
+# Sécuriser les permissions
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+
+# Vérifier que la clé est bien ajoutée
+cat ~/.ssh/authorized_keys
+# Vérifier le nom de l’interface réseau (souvent eth0)
 nmcli device status
 
 # Ajouter une nouvelle connexion Ethernet avec IP statique
-sudo nmcli con add type ethernet ifname eth0 con-name static-eth0 ipv4.addresses 10.0.0.1/24 ipv4.method manual
+sudo nmcli con add type ethernet ifname eth0 con-name static-eth0 ipv4.addresses 10.0.0.2/24 ipv4.method manual
 
 # (Optionnel) Ajouter une passerelle si nécessaire
 sudo nmcli con mod static-eth0 ipv4.gateway 10.0.0.254

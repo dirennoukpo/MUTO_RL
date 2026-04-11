@@ -1,93 +1,142 @@
-# MUTO_RL - Documentation de la branche
+# MUTO_RL - Documentation complete
 
-## But de la branche
+## Objectif
 
-Cette branche sert a automatiser le demarrage d'un Raspberry Pi 5 pour un environnement robotique/IA:
+Cette branche automatise la preparation d'une machine Jetson Nano pour un usage distant et deploiement rapide:
 
-1. preparer la machine distante (paquets systeme),
-2. installer les dependances utiles (reseau, docker, python),
-3. deposer les fichiers de configuration depuis la machine locale vers le Raspberry Pi.
+1. transfert des scripts/configuration depuis la machine locale,
+2. installation des dependances systeme sur la Jetson,
+3. configuration reseau et acces distant.
 
-## Arborescence utile
+## Fichiers du projet
 
-- `setup_raspberrypi5.sh`: script lance en local pour preparer l'envoi vers le Pi.
-- `scripts/dependances.sh`: script execute sur le Raspberry Pi pour installer/configurer les dependances.
-- `config/.env`: variables d'environnement locales (exemple: IP du Raspberry Pi).
+- `setup_jetson_nano.sh`:
+	script lance sur la machine locale pour copier les fichiers vers la Jetson.
+- `scripts/dependances.sh`:
+	script a executer sur la Jetson pour installer/configurer l'environnement.
+- `config/.env.exemple`:
+	exemple de variables d'environnement a preparer localement.
 
-## Detail des scripts
+## 1) Script local: `setup_jetson_nano.sh`
 
-### `setup_raspberrypi5.sh` (machine locale)
+### Role
 
-Ce script:
+Preparer le deploiement vers la Jetson via SCP.
 
-1. charge les variables du fichier `config/.env`,
-2. copie `scripts/dependances.sh` dans `/home/pi/` sur le Pi,
-3. copie le dossier `config/` dans `/home/pi/` sur le Pi.
+### Fonctionnement
 
-Commande utilisee:
+1. charge les variables de `./config/.env`:
 
 ```bash
-scp ./scripts/dependances.sh pi@$IP_PI:/home/pi/
-scp -r ./config/ pi@$IP_PI:/home/pi/
+set -a
+source ./config/.env
+set +a
 ```
 
-### `scripts/dependances.sh` (Raspberry Pi)
+2. copie le script distant:
 
-Ce script execute les actions suivantes:
+```bash
+scp ./scripts/dependances.sh jetson@$IP_JETSON:/home/jetson/
+```
 
-1. `apt-get update` + `apt-get upgrade` + `apt autoremove`,
-2. installation et activation de Tailscale,
-3. affichage d'etat reseau Tailscale (`tailscale ip`, `tailscale status`),
-4. installation de Git,
-5. installation de Docker via script officiel,
-6. ajout de l'utilisateur courant au groupe docker,
-7. installation de `python3-pip`, creation d'un environnement virtuel `venv`,
-8. installation de librairies Python (`Adafruit-SSD1306`, `Adafruit-GPIO`, `Pillow`),
-9. configuration d'une interface Ethernet statique via `nmcli`,
-10. clonage du depot `MUTO_RL`.
+3. copie le dossier de configuration:
 
-## Prerequis
+```bash
+scp -r ./config/ jetson@$IP_JETSON:/home/jetson/
+```
 
-Avant execution, verifier:
+### Prerequis
 
-1. acces SSH au Raspberry Pi (utilisateur `pi`),
-2. variable `IP_PI` correctement renseignee dans `config/.env`,
-3. droits `sudo` sur le Raspberry Pi,
-4. commandes `scp` et `ssh` disponibles sur la machine locale.
+- compte SSH `jetson` accessible,
+- variable `IP_JETSON` definie,
+- commande `scp` disponible en local.
 
-Exemple minimal de `config/.env`:
+## 2) Script distant: `scripts/dependances.sh`
+
+Ce script est prevu pour etre execute sur la Jetson Nano.
+
+### A. Maintenance systeme
+
+1. `sudo apt-get update`
+2. `sudo apt-get upgrade -y`
+3. `sudo apt autoremove -y`
+
+### B. Tailscale
+
+1. installe Tailscale via script officiel,
+2. lance `sudo tailscale up`,
+3. affiche `tailscale ip` et `tailscale status`.
+
+### C. Cle SSH
+
+1. cree `~/.ssh` si besoin,
+2. ajoute une cle publique dans `~/.ssh/authorized_keys`,
+3. fixe les permissions (`700` puis `600`),
+4. affiche le contenu de `authorized_keys`.
+
+### D. Reseau Ethernet statique
+
+1. verifie les interfaces avec `nmcli device status`,
+2. cree une connexion `static-eth0` sur `eth0` avec `10.0.0.2/24`,
+3. configure passerelle (`10.0.0.254`) et DNS Google,
+4. active la connexion,
+5. verifie avec `ip addr show eth0`.
+
+### E. Depot projet
+
+Clone le depot:
+
+```bash
+git clone https://github.com/dirennoukpo/MUTO_RL.git
+cd MUTO_RL/
+```
+
+## Variables d'environnement
+
+Le script local attend un fichier `config/.env`.
+
+Exemple minimal:
 
 ```env
-IP_PI=192.168.1.50
+IP_JETSON=192.168.1.60
 ```
 
-## Procedure conseillee
+Le fichier `config/.env.exemple` peut servir de base.
 
-1. depuis la machine locale:
+## Procedure complete recommandee
+
+1. creer le fichier de variables:
 
 ```bash
-chmod +x setup_raspberrypi5.sh
-./setup_raspberrypi5.sh
+cp config/.env.exemple config/.env
+# puis renseigner IP_JETSON
 ```
 
-2. puis, sur le Raspberry Pi:
+2. depuis la machine locale:
 
 ```bash
-chmod +x /home/pi/dependances.sh
-/home/pi/dependances.sh
+chmod +x setup_jetson_nano.sh
+./setup_jetson_nano.sh
+```
+
+3. se connecter a la Jetson et executer:
+
+```bash
+chmod +x /home/jetson/dependances.sh
+/home/jetson/dependances.sh
 ```
 
 ## Points d'attention
 
-- la commande `tailscale up` peut demander une action interactive,
-- la commande `newgrp docker` peut ouvrir un nouveau contexte shell,
-- la configuration reseau statique force `eth0` en `10.0.0.1/24` (adapter si besoin),
-- certaines etapes sont potentiellement intrusives en production (upgrade systeme, reseau, docker).
+- `tailscale up` peut demander une validation interactive,
+- la cle publique est ajoutee en dur dans le script (a securiser selon le contexte),
+- la config reseau statique peut couper la connectivite si le plan IP ne correspond pas,
+- le script ne contient pas de gestion d'erreurs (`set -e`, logs),
+- les commandes ne sont pas idempotentes (re-execution potentiellement problematique).
 
-## Etat actuel
+## Ameliorations conseillees
 
-La branche fournit une base de provisioning fonctionnelle, mais il est recommande d'ajouter ensuite:
-
-1. des scripts idempotents,
-2. des verifications d'erreur (`set -e`, logs),
-3. une separation claire entre installation de base et configuration metier.
+1. ajouter `set -euo pipefail` en tete des scripts,
+2. tester l'existence des connexions `nmcli` avant creation,
+3. externaliser la cle SSH et les IP dans `config/.env`,
+4. ajouter des verifications post-installation (Tailscale, reseau, acces SSH).
