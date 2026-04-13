@@ -1,6 +1,5 @@
-sudo apt-get update
-sudo apt-get upgrade -y
-sudo apt autoremove -y
+git clone https://github.com/dirennoukpo/MUTO_RL.git
+cd MUTO_RL/
 curl -fsSL https://tailscale.com/install.sh | sh
 sudo tailscale up
 tailscale ip
@@ -14,12 +13,6 @@ rm get-docker.sh
 # Add your user to the docker group
 sudo usermod -aG docker $USER
 newgrp docker
-sudo apt install python3-pip -y
-python3 -m venv venv
-source venv/bin/activate
-pip3 install Adafruit-SSD1306 Adafruit-GPIO Pillow
-# python3 yahboom_oled.py
-deactivate
 # Vérifier le nom de l’interface réseau
 nmcli device status
 
@@ -37,6 +30,4 @@ sudo nmcli con up static-eth0
 
 # Vérifier que l’adresse est bien appliquée
 ip addr show eth0
-git clone https://github.com/dirennoukpo/MUTO_RL.git
-cd MUTO_RL/
 sudo nano /etc/ssh/sshd_config
