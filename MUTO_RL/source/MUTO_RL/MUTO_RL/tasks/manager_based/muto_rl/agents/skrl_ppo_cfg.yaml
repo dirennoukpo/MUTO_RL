@@ -64,16 +64,13 @@ agent:
   kl_threshold: 0.0
 
   rewards_shaper_scale: 0.01
-
-  experiment:
-    directory: muto_rs_push_recovery
-    experiment_name: phase1
-    write_interval: 100
-    checkpoint_interval: 500
+directory: muto_rs_locomotion
+experiment_name: phase1_locomotion
 
 # ─── Trainer ──────────────────────────────────────────────────────────────────
 trainer:
-  timesteps: 3000000   # ~3M steps — ajuster selon convergence TensorBoard
+  timesteps: 10000000  # locomotion nécessite plus que push recovery
+
 
 # ─── Notes de tuning ──────────────────────────────────────────────────────────
 # Robot ne se stabilise pas après ~500k steps :

@@ -25,6 +25,9 @@ from .rewards import (  # noqa: F401
     base_angular_velocity_xy,
     action_rate,
     joint_torques,
+    #new rewards for locomotion
+    linear_velocity_tracking,
+    angular_velocity_tracking,
 )
 
 from .terminations import (  # noqa: F401
