@@ -190,9 +190,6 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 # empy 3.3.4 OBLIGATOIRE pour colcon/ament Humble
 RUN pip install --no-cache-dir \
     "empy==3.3.4" \
-    Adafruit-SSD1306 \
-    Adafruit-GPIO \
-    Pillow \
     pytest-repeat \
     pytest-rerunfailures \
     catkin-pkg \

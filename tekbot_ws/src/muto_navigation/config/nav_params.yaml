@@ -1,4 +1,0 @@
-navigation_node:
-  ros__parameters:
-    rate_hz: 5.0
-    obstacle_stop_distance_m: 0.5

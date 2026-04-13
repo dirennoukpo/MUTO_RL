@@ -1,5 +1,0 @@
-rl_policy_node:
-  ros__parameters:
-    dry_run: true
-    obs_dim: 70
-    action_scale_rad: 1.0

@@ -1,9 +1,0 @@
-# Mode cible demande (ex: IDLE, DRY_RUN, RL_ACTIVE, SAFE, MANUAL, EMERGENCY).
-string requested_mode
----
-# Indique si la transition a ete acceptee par le mode manager.
-bool success
-# Message explicite (erreur ou confirmation) pour l'operateur.
-string message
-# Mode courant apres traitement de la requete.
-string current_mode

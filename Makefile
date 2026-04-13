@@ -35,7 +35,8 @@ endif
 NAME = $(shell grep '^CONTAINER_NAME=' $(ENV_DIR)/$(PROFILE) | cut -d'=' -f2)
 
 # Commande de base incluant le fichier .env spécifique
-COMPOSE = DISPLAY=$${DISPLAY:-:0} ENV_PROFILE=$(PROFILE) docker compose -f docker/docker-compose.yml --env-file $(ENV_DIR)/$(BASE_ENV) --env-file $(ENV_DIR)/$(PROFILE)
+# Le mapping UID/GID aligne les droits fichiers du conteneur sur l'utilisateur hote.
+COMPOSE = DISPLAY=$${DISPLAY:-:0} ENV_PROFILE=$(PROFILE) HOST_UID=$$(id -u) HOST_GID=$$(id -g) HOST_USER=$(USER_NAME) docker compose -f docker/docker-compose.yml --env-file $(ENV_DIR)/$(BASE_ENV) --env-file $(ENV_DIR)/$(PROFILE)
 
 define RUN_WITH_DOCKER_ACCESS
 	@if docker info >/dev/null 2>&1; then \
@@ -78,22 +79,10 @@ build: validate-envs
 run: validate-envs
 	-xhost +local:docker 2>/dev/null || true
 	$(call RUN_WITH_DOCKER_ACCESS,$(COMPOSE) up -d)
-	$(call RUN_WITH_DOCKER_ACCESS,cid="$$($(COMPOSE) ps -q ros-dev)"; \
-	if [ -z "$$cid" ]; then \
-		echo "ERREUR: conteneur du service ros-dev introuvable apres make run"; \
-		exit 1; \
-	fi; \
-	docker exec "$$cid" bash -lc "if [ \"\$${START_YAHBOOM_OLED:-true}\" = \"true\" ] && [ -f \"\$$WORKING_DIR/yahboom_oled.py\" ] && ! pgrep -f \"[p]ython3 .*yahboom_oled.py\" >/dev/null 2>&1; then echo \"[make run] Lancement de yahboom_oled.py\"; python3 \"\$$WORKING_DIR/yahboom_oled.py\" >/tmp/yahboom_oled.log 2>&1 & else echo \"[make run] yahboom_oled.py deja actif ou desactive\"; fi")
 
 run-clean: validate-envs
 	-xhost +local:docker 2>/dev/null || true
 	$(call RUN_WITH_DOCKER_ACCESS,$(COMPOSE) up -d --remove-orphans)
-	$(call RUN_WITH_DOCKER_ACCESS,cid="$$($(COMPOSE) ps -q ros-dev)"; \
-	if [ -z "$$cid" ]; then \
-		echo "ERREUR: conteneur du service ros-dev introuvable apres make run-clean"; \
-		exit 1; \
-	fi; \
-	docker exec "$$cid" bash -lc "if [ \"\$${START_YAHBOOM_OLED:-true}\" = \"true\" ] && [ -f \"\$$WORKING_DIR/yahboom_oled.py\" ] && ! pgrep -f \"[p]ython3 .*yahboom_oled.py\" >/dev/null 2>&1; then echo \"[make run-clean] Lancement de yahboom_oled.py\"; python3 \"\$$WORKING_DIR/yahboom_oled.py\" >/tmp/yahboom_oled.log 2>&1 & else echo \"[make run-clean] yahboom_oled.py deja actif ou desactive\"; fi")
 
 shell:
 	$(call RUN_WITH_DOCKER_ACCESS,cid="$$($(COMPOSE) ps -q ros-dev)"; \

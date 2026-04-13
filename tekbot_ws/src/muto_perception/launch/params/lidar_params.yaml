@@ -1,4 +1,0 @@
-lidar_processor_node:
-  ros__parameters:
-    rate_hz: 10.0
-    max_obstacle_distance_m: 1.0

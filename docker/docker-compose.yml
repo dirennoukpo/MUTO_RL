@@ -39,6 +39,7 @@ services:
       - NET_RAW
     network_mode: host
     privileged: true
+    user: "${HOST_UID}:${HOST_GID}"
     stdin_open: true
     tty: true
     working_dir: ${WORKING_DIR}

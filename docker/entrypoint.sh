@@ -8,8 +8,6 @@ set -e
 WORKSPACE_DIR=$WORKING_DIR
 MUTO_LINK_CPP_DIR=$WORKSPACE_DIR/muto_link_cpp
 TEKBOT_WS_DIR=$WORKSPACE_DIR/tekbot_ws
-OLED_SCRIPT=$WORKSPACE_DIR/yahboom_oled.py
-START_YAHBOOM_OLED=${START_YAHBOOM_OLED:-true}
 
 if [ -f /opt/tekbot_venv/bin/activate ]; then
     source /opt/tekbot_venv/bin/activate
@@ -93,25 +91,6 @@ if [ -d "$WORKSPACE_DIR" ]; then
     else
         echo "[entrypoint] WARN: tekbot_ws introuvable dans $TEKBOT_WS_DIR"
     fi
-fi
-
-# ────────────────────────────────────────────────────────────────
-# OLED Yahboom — lancement automatique optionnel
-# ────────────────────────────────────────────────────────────────
-if [ "$START_YAHBOOM_OLED" = "true" ]; then
-    if [ -f "$OLED_SCRIPT" ]; then
-        if pgrep -f "[p]ython3 .*yahboom_oled.py" >/dev/null 2>&1; then
-            echo "[entrypoint] yahboom_oled.py déjà en cours d'exécution."
-        else
-            echo "[entrypoint] Lancement de yahboom_oled.py en arrière-plan..."
-            python3 "$OLED_SCRIPT" >/tmp/yahboom_oled.log 2>&1 &
-            echo "[entrypoint] yahboom_oled.py PID=$! (logs: /tmp/yahboom_oled.log)"
-        fi
-    else
-        echo "[entrypoint] WARN: script OLED introuvable: $OLED_SCRIPT"
-    fi
-else
-    echo "[entrypoint] START_YAHBOOM_OLED=false, lancement OLED ignoré."
 fi
 
 # ────────────────────────────────────────────────────────────────
