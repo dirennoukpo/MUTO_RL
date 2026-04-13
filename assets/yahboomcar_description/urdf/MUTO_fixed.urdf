@@ -429,7 +429,7 @@
        Conservée telle quelle pour l'instant. À inspecter dans Isaac Sim. -->
   <joint name="yz3_Joint" type="revolute">
   <!--modifé après inspection-->
-    <origin xyz="-0.049774060130825 -0.0504179449064464 0.0158615312365191" />  
+    <origin xyz="-0.049774060130825 -0.0504179449064464 0.0158615312365191" rpy="0 0 0" />
     <parent link="yz2_Link" />
     <child link="yz3_Link" />
     <axis xyz="0.711636313809377 0.702548045949743 0" />
