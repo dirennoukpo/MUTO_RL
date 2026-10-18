@@ -1,0 +1,27 @@
+[project]
+name = "muto-mujoco"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "gymnasium>=1.4.0",
+    "mujoco>=3.16.0",
+    "numpy>=2.5.4",
+    "stable-baselines3>=2.9.0",
+    "tensorboard>=2.21.0",
+    "torch>=2.14.1",
+]
+
+[dependency-groups]
+dev = [
+    "fast-simplification>=0.2.0",
+    "pillow>=13.0.0",
+    "trimesh>=5.1.1",
+]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
