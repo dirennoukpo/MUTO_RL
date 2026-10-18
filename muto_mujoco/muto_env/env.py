@@ -2,7 +2,7 @@
 
 Policy interface — this is what the real robot must reproduce (see ROBOT_NOTES 6b/6c):
   obs (29) = projected gravity (3) | 0.25·gyro [rad/s] (3) | previous action (18) | command / CMD_MAX (3)
-             | gait clock sin, cos (2π · GAIT_HZ · t) (2)
+             | gait clock sin, cos (2π · GAIT_HZ · t) (2), or (0, 0) when the command is zero (= stand still)
   act (18) = joint targets: home + ACTION_SCALE · action, servo-ID order (robot.JOINT_NAMES),
              rounded to whole servo degrees, sent at 50 Hz
 No measured joint angles in the observation: the real driver can't read them at 50 Hz.
@@ -48,6 +48,7 @@ class EnvConfig:
     frictionloss: tuple = (0.02, 0.1)
     damping_scale: tuple = (0.8, 1.2)
     foot_friction: tuple = (0.5, 1.2)
+    servo_zero_offset_deg: float = 2.0  # per-joint calibration error: each servo holds target + offset
     # ── perturbations ──
     push_interval_s: tuple = (3.0, 6.0)
     push_vel: float = 0.3  # [m/s] max horizontal velocity kick
@@ -59,7 +60,8 @@ class EnvConfig:
         lin_vel_z=-2.0, ang_vel_xy=-0.05,        # no bouncing / rocking
         air_time=1.0, foot_slip=-0.5,            # take real steps, don't shuffle
         gait=0.5,                                # contact pattern follows the tripod clock
-        stand_still=-1.0,                        # zero command: stay in the home pose
+        stand_still=-1.0,                        # zero command: stay in the home pose,
+        stand_feet=1.0, stand_motion=-0.05,      #   all six feet down, joints not moving
         action_rate=-0.02, torque=-0.002,        # smooth, low effort (servo lifetime, battery)
         fall=-20.0))
 
@@ -126,6 +128,8 @@ class MutoEnv(gym.Env):
         m.dof_frictionloss[self.dadr] = self._u(c.frictionloss, m.nu)
         m.dof_damping[self.dadr] = nom["damping"][self.dadr] * self._u(c.damping_scale, m.nu)
         m.geom_friction[self.feet, 0] = self._u(c.foot_friction)
+        z = np.radians(c.servo_zero_offset_deg)
+        self.zero_offset = self._u((-z, z), m.nu)
         self.latency_steps = int(round(self._u(c.latency_s) / m.opt.timestep))
         tau = self._u(c.servo_tau_s)
         self.servo_alpha = 1.0 if tau <= 0 else m.opt.timestep / (tau + m.opt.timestep)
@@ -178,7 +182,7 @@ class MutoEnv(gym.Env):
         for i in range(self.substeps):
             goal = prev_target if i < self.latency_steps else self.target
             self.cmd += self.servo_alpha * (goal - self.cmd)
-            d.ctrl[:] = self.cmd
+            d.ctrl[:] = self.cmd + self.zero_offset
             mujoco.mj_step(m, d)
 
         self.step_count += 1
@@ -223,8 +227,9 @@ class MutoEnv(gym.Env):
 
     def _obs(self):
         clock = 2 * np.pi * self.gait_phase
+        tick = [np.sin(clock), np.cos(clock)] if np.any(self.command != 0) else [0.0, 0.0]  # stopped clock = stand
         return np.concatenate([self.imu_gravity, GYRO_SCALE * self.imu_gyro, self.last_action,
-                               self.command / CMD_MAX, [np.sin(clock), np.cos(clock)]]).astype(np.float32)
+                               self.command / CMD_MAX, tick]).astype(np.float32)
 
     def _fell(self):
         d = self.data
@@ -255,7 +260,7 @@ class MutoEnv(gym.Env):
 
         terms = dict(
             track_lin=np.exp(-np.sum((self.command[:2] - v_b[:2]) ** 2) / 0.02),  # 14 cm/s error -> e^-1
-            track_yaw=np.exp(-(self.command[2] - w_b[2]) ** 2 / 0.25),  # 0.5 rad/s error -> e^-1
+            track_yaw=np.exp(-(self.command[2] - w_b[2]) ** 2 / 0.01),  # 0.1 rad/s error -> e^-1 (strict: no drift)
             upright=np.sum(g_b[:2] ** 2),
             height=(d.qpos[2] - self.home_qpos[2]) ** 2,
             lin_vel_z=v_b[2] ** 2,
@@ -264,6 +269,8 @@ class MutoEnv(gym.Env):
             foot_slip=np.sum(foot_vel ** 2 * contact),
             gait=np.mean(contact == expected_contact) if moving else 0.0,
             stand_still=0.0 if moving else np.sum(np.abs(d.qpos[self.qadr] - self.home_ctrl)),
+            stand_feet=0.0 if moving else np.mean(contact),
+            stand_motion=0.0 if moving else np.sum(d.qvel[self.dadr] ** 2),
             action_rate=np.sum((action - self.last_action) ** 2),
             torque=np.sum(d.actuator_force ** 2),
             fall=float(fell),

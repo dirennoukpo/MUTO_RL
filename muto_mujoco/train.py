@@ -2,6 +2,7 @@
 
     uv run python train.py                      # new run
     uv run python train.py --steps 2e6 --envs 6
+    uv run python train.py --init runs/<run>/final.zip    # continue from a trained policy
     uv run tensorboard --logdir runs             # watch training at http://localhost:6006
 """
 
@@ -56,6 +57,7 @@ def main():
     p.add_argument("--envs", type=int, default=6)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--name", default="walk")
+    p.add_argument("--init", help="start from this trained policy (.zip) instead of from scratch")
     args = p.parse_args()
 
     torch.set_num_threads(2)
@@ -67,13 +69,18 @@ def main():
     # rewards are normalized for learning; observations are NOT (the robot would need the stats)
     venv = VecNormalize(venv, norm_obs=False, norm_reward=True, gamma=0.99)
 
-    model = PPO(
-        "MlpPolicy", venv, seed=args.seed, verbose=1, tensorboard_log=str(run),
+    ppo_args = dict(
+        seed=args.seed, verbose=1, tensorboard_log=str(run),
         n_steps=512, batch_size=1024, n_epochs=5, learning_rate=3e-4, gamma=0.99, gae_lambda=0.95,
         clip_range=0.2, ent_coef=0.0, max_grad_norm=1.0, target_kl=0.02,
         policy_kwargs=dict(net_arch=dict(pi=[256, 128, 64], vf=[256, 128, 64]),
                            activation_fn=torch.nn.ELU, log_std_init=-1.0),
     )
+    if args.init:
+        model = PPO.load(args.init, env=venv, device="cpu",
+                         **{k: v for k, v in ppo_args.items() if k not in ("policy_kwargs",)})
+    else:
+        model = PPO("MlpPolicy", venv, **ppo_args)
     print(f"run dir: {run}")
     model.learn(
         total_timesteps=int(args.steps),
