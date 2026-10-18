@@ -21,6 +21,19 @@ In the viewer: double-click a body to select it, Ctrl+right-drag to push it,
 the *Control* panel on the right has a slider per servo. Press `3` to show
 collision shapes, `2` to hide meshes.
 
+## Train, watch, export
+
+```bash
+uv run python train.py                              # PPO on 6 CPU processes, ~50 min for 5M steps
+uv run tensorboard --logdir runs                    # progress at http://localhost:6006
+uv run python play.py runs/<run>/final.zip          # viewer: arrow keys / , . to steer, space to stop
+uv run python export_onnx.py runs/<run>/final.zip   # -> final.onnx for the robot's muto_policy node
+```
+
+The task: walk on velocity commands (vx, vy, yaw rate); a zero command means stand still in the
+home pose. The policy interface (what the robot must reproduce) is documented at the top of
+`muto_env/env.py` and embedded in the exported ONNX as metadata (`muto_interface`).
+
 ## Files
 
 | Path | What |
@@ -31,6 +44,9 @@ collision shapes, `2` to hide meshes.
 | `tools/prepare_meshes.py` | rebuilds `assets/meshes/` from `../assets/yahboomcar_description/meshes/` |
 | `tools/build_mjcf.py` | rebuilds `model/muto.xml` from `muto_des.urdf`; servo model + masses live here (each value marked DATASHEET or ESTIMATE) |
 | `tools/render.py` | saves a PNG (visual + collision view) |
+| `muto_env/robot.py` | real-robot facts: servo-ID order, servo↔URDF angle conversion, rates |
+| `muto_env/env.py` | Gymnasium environment: observation/action interface, rewards, randomization |
+| `train.py` / `play.py` / `export_onnx.py` | train with PPO / watch and steer / export to ONNX |
 
 After a new SolidWorks export: `uv run python tools/prepare_meshes.py && uv run python tools/build_mjcf.py`.
 

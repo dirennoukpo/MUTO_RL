@@ -24,6 +24,11 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import trimesh
 
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from muto_env.robot import HOME_SERVO_DEG, SERVO_LIMIT_DEG, servo_to_urdf  # noqa: E402
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 URDF = ROOT.parent / "assets/yahboomcar_description/urdf/muto_des.urdf"
 MESH_DIR = ROOT / "assets/meshes"
@@ -32,7 +37,7 @@ OUT = ROOT / "model/muto.xml"
 # Real servo IDs (Yahboom "Control Bus Servo" tutorial): leg1 = right front ... leg6 = left front.
 #   leg1 yq: 1 2 3   leg2 yz: 4 5 6    leg3 yh: 7 8 9
 #   leg4 zh: 10 11 12  leg5 zz: 13 14 15  leg6 zq: 16 17 18
-LEGS_BY_SERVO_ID = ["yq", "yz", "yh", "zh", "zz", "zq"]
+from muto_env.robot import LEGS_BY_SERVO_ID  # noqa: E402
 FOOT_RADIUS = 0.008  # [m] rubber foot cap, ~16 mm diameter in photos
 
 # ── Servo: Yahboom 35KG serial bus servo (datasheet: YB-SD35M "Introduction of 35kg bus servo") ──
@@ -41,7 +46,6 @@ STALL_TORQUE = 35 * 0.0980665  # [N·m] [DATASHEET] stall torque >= 35 kgf·cm  
 NO_LOAD_SPEED = (math.pi / 3) / 0.22  # [rad/s] [DATASHEET] <= 0.22 s / 60°     -> 4.76 rad/s
 SERVO_MASS = 0.0615  # [kg] [DATASHEET] 61.5 g, 40 x 20 x 40.5 mm
 SERVO_SIZE = (0.020, 0.040, 0.0405)  # [m] [DATASHEET]
-JOINT_RANGE = math.radians(90)  # [rad] Yahboom software limit motor(id, angle in [-90, 90])
 # DC-motor model: tau = clip(KP * err, ±STALL_TORQUE) - BACK_EMF_DAMPING * qdot.
 # With this damping the joint stalls at STALL_TORQUE and free-runs at NO_LOAD_SPEED, like the datasheet.
 BACK_EMF_DAMPING = STALL_TORQUE / NO_LOAD_SPEED  # [N·m·s/rad] -> 0.72
@@ -52,25 +56,19 @@ FRICTION_LOSS = 0.05  # [N·m] [ESTIMATE] dry gearbox friction
 VISCOUS_FRICTION = 0.06  # [N·m·s/rad] [ESTIMATE]
 KP = 20.0  # [N·m/rad] [ESTIMATE] servo internal P gain: full torque at ~10° error
 
-# Yahboom servo angles <-> URDF joint angles (derived from MutoLib leg.py + CAD, see ROBOT_NOTES 6c):
-#   servo1 = +q1,  servo2 = -q2 + FEMUR_DROOP_DEG,  servo3 = -q3 + FEMUR_DROOP_DEG + TIBIA_LEAN_DEG
-FEMUR_DROOP_DEG = 10.75  # URDF zero: femur axis-to-axis line points 10.75 deg below horizontal
-TIBIA_LEAN_DEG = 4.07  # URDF zero: tibia leans 4.07 deg outward from vertical
-HOME_SERVO_DEG = (0, -30, -15)  # MutoLib standby: femur 30 deg up, tibia 15 deg out
-
-
-def servo_to_urdf(s1, s2, s3):
-    """Yahboom servo command (deg) -> URDF joint angles (rad)."""
-    return (math.radians(s1), math.radians(-s2 + FEMUR_DROOP_DEG),
-            math.radians(-s3 + FEMUR_DROOP_DEG + TIBIA_LEAN_DEG))
-
-
 # Total mass if you weigh the real robot (kg); the missing mass is added to base_link. None = don't.
 MEASURED_TOTAL_MASS = None
 
 
 def fmt(v):
     return " ".join(f"{x:.6g}" for x in np.atleast_1d(v))
+
+
+def joint_range(k):
+    """URDF range (rad) of joint k (1..3) equivalent to the servo's [-90, 90] deg software limit."""
+    lo = servo_to_urdf(*[-SERVO_LIMIT_DEG] * 3)[k - 1]
+    hi = servo_to_urdf(*[SERVO_LIMIT_DEG] * 3)[k - 1]
+    return min(lo, hi), max(lo, hi)
 
 
 def mesh_parts(link_name):
@@ -130,7 +128,9 @@ def main():
         out(f'{ind}<body name="{name}" pos="{joint.find("origin").get("xyz")}">')
         inertial(link, ind + "  ")
         if joint.get("type") == "revolute":
-            out(f'{ind}  <joint name="{joint.get("name")}" class="servo" axis="{joint.find("axis").get("xyz")}"/>')
+            lo, hi = joint_range(int(name[2]))
+            out(f'{ind}  <joint name="{joint.get("name")}" class="servo" axis="{joint.find("axis").get("xyz")}" '
+                f'range="{lo:.4f} {hi:.4f}"/>')
         visual(name, link, ind + "  ")
         if name.endswith("2_Link"):
             # SolidWorks lists both the femur (2) and knee (3) servos inside the *2_Link part
@@ -152,9 +152,8 @@ def main():
     out("  <default>")
     out('    <default class="muto">')
     out(f'      <joint damping="{BACK_EMF_DAMPING + VISCOUS_FRICTION:.4g}" armature="{ARMATURE}" '
-        f'frictionloss="{FRICTION_LOSS}" range="{-JOINT_RANGE:.4f} {JOINT_RANGE:.4f}"/>')
-    out(f'      <position kp="{KP}" forcerange="{-STALL_TORQUE:.4f} {STALL_TORQUE:.4f}" '
-        f'ctrlrange="{-JOINT_RANGE:.4f} {JOINT_RANGE:.4f}"/>')
+        f'frictionloss="{FRICTION_LOSS}"/>')
+    out(f'      <position kp="{KP}" forcerange="{-STALL_TORQUE:.4f} {STALL_TORQUE:.4f}"/>')
     out('      <default class="servo"/>')
     out('      <default class="visual"><geom type="mesh" contype="0" conaffinity="0" group="2" density="0"/></default>')
     out('      <default class="collision"><geom group="3" rgba="0.8 0.2 0.2 0.4"/></default>')
@@ -191,7 +190,8 @@ def main():
     out("  <actuator>")
     for i, leg in enumerate(LEGS_BY_SERVO_ID):
         for k in range(3):
-            out(f'    <position name="{leg}{k + 1}" joint="{leg}{k + 1}_Joint" class="muto"/>'
+            lo, hi = joint_range(k + 1)
+            out(f'    <position name="{leg}{k + 1}" joint="{leg}{k + 1}_Joint" class="muto" ctrlrange="{lo:.4f} {hi:.4f}"/>'
                 f"  <!-- servo ID {3 * i + k + 1} -->")
     out("  </actuator>")
     out("")

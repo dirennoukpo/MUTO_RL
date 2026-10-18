@@ -4,8 +4,8 @@
 
   <default>
     <default class="muto">
-      <joint damping="0.7811" armature="0.03" frictionloss="0.05" range="-1.5708 1.5708"/>
-      <position kp="20.0" forcerange="-3.4323 3.4323" ctrlrange="-1.5708 1.5708"/>
+      <joint damping="0.7811" armature="0.03" frictionloss="0.05"/>
+      <position kp="20.0" forcerange="-3.4323 3.4323"/>
       <default class="servo"/>
       <default class="visual"><geom type="mesh" contype="0" conaffinity="0" group="2" density="0"/></default>
       <default class="collision"><geom group="3" rgba="0.8 0.2 0.2 0.4"/></default>
@@ -62,17 +62,17 @@
       <body name="yh1_servo" pos="-0.10239 -0.050691 -0.011347"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
       <body name="zq1_Link" pos="0.10239 0.050691 0.008903">
         <inertial pos="0.0185665149859944 0.0174593926986178 -0.0281154669571667" mass="0.00903974345886887" fullinertia="3.19473833259615E-06 3.19364173368577E-06 3.17871848055922E-06 -1.5772262309596E-08 -4.10724944219558E-13 2.57642426107712E-13"/>
-        <joint name="zq1_Joint" class="servo" axis="0 0 1"/>
+        <joint name="zq1_Joint" class="servo" axis="0 0 1" range="-1.5708 1.5708"/>
         <geom class="visual" mesh="zq1_Link" rgba="1 1 1 1"/>
         <body name="zq2_Link" pos="0.055455 0.015791 -0.027474">
           <inertial pos="0.0091947864433414 0.0447723583258242 0.00627608546858842" mass="0.0134955335282745" fullinertia="3.70493952686155E-06 3.72365421098105E-06 5.64328056865572E-06 -6.06692438895476E-07 1.55408943187372E-07 1.53032188697822E-07"/>
-          <joint name="zq2_Joint" class="servo" axis="0.70163 -0.71254 0"/>
+          <joint name="zq2_Joint" class="servo" axis="0.70163 -0.71254 0" range="-1.3832 1.7584"/>
           <geom class="visual" mesh="zq2_Link" rgba="0.180392156862745 0.180392156862745 0.180392156862745 1"/>
           <body name="zq2_servo" pos="0 0 0"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="zq3_servo" pos="0.051296 0.050511 -0.0094001"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="zq3_Link" pos="0.051296 0.050511 -0.0094001">
             <inertial pos="-0.0140726677039502 0.0244731914237745 -0.0553529584226903" mass="0.0218288017151581" fullinertia="1.59333148326703E-05 1.58790827650997E-05 6.38248929050859E-06 1.75800653003959E-06 -2.14005800372377E-07 -2.10730601345386E-07"/>
-            <joint name="zq3_Joint" class="servo" axis="-0.70163 0.71254 0"/>
+            <joint name="zq3_Joint" class="servo" axis="-0.70163 0.71254 0" range="-1.3121 1.8295"/>
             <geom class="visual" mesh="zq3_Link" rgba="1 1 1 1"/>
             <geom name="zq_foot" class="foot" pos="-0.0167913 0.02206 -0.135496"/>
             <site name="zq_foot" pos="-0.0167913 0.02206 -0.135496" size="0.0096"/>
@@ -81,17 +81,17 @@
       </body>
       <body name="zz1_Link" pos="0 0.0809 0.008903">
         <inertial pos="0.0010047305607133 0.0254663779412354 -0.0281154668363381" mass="0.00903974345630172" fullinertia="3.2099694535571E-06 3.17841060791292E-06 3.17871848503719E-06 2.73426844062508E-10 -4.72469009933516E-13 -1.09205176837107E-13"/>
-        <joint name="zz1_Joint" class="servo" axis="0 0 1"/>
+        <joint name="zz1_Joint" class="servo" axis="0 0 1" range="-1.5708 1.5708"/>
         <geom class="visual" mesh="zz1_Link" rgba="1 1 1 1"/>
         <body name="zz2_Link" pos="0.028485 0.050133 -0.027474">
           <inertial pos="-0.0248188556185602 0.0386774348595942 0.00407158098652049" mass="0.013495533786557" fullinertia="4.32074333854832E-06 3.14148579452827E-06 5.60964554602382E-06 -1.93731547094506E-08 5.95897399025748E-09 3.62897309594263E-07"/>
-          <joint name="zz2_Joint" class="servo" axis="0.99987 -0.016422 0"/>
+          <joint name="zz2_Joint" class="servo" axis="0.99987 -0.016422 0" range="-1.3832 1.7584"/>
           <geom class="visual" mesh="zz2_Link" rgba="0.180392156862745 0.180392156862745 0.180392156862745 1"/>
           <body name="zz2_servo" pos="0 0 0"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="zz3_servo" pos="0.0011713 0.071318 -0.013545"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="zz3_Link" pos="0.0011713 0.071318 -0.013545">
             <inertial pos="-0.0271513561152309 0.0100015835797411 -0.0549881737337901" mass="0.0218288017111724" fullinertia="1.41489327372738E-05 1.76681561594606E-05 6.37779799106708E-06 5.78159429767663E-08 3.16990534840714E-09 1.92994418686503E-07"/>
-            <joint name="zz3_Joint" class="servo" axis="-0.99987 0.016422 0"/>
+            <joint name="zz3_Joint" class="servo" axis="-0.99987 0.016422 0" range="-1.3121 1.8295"/>
             <geom class="visual" mesh="zz3_Link" rgba="1 1 1 1"/>
             <geom name="zz_foot" class="foot" pos="-0.0273357 0.010227 -0.135205"/>
             <site name="zz_foot" pos="-0.0273357 0.010227 -0.135205" size="0.0096"/>
@@ -100,17 +100,17 @@
       </body>
       <body name="zh1_Link" pos="-0.10239 0.050692 0.008903">
         <inertial pos="-0.017289767809363 0.0187245777416072 -0.0281154668928969" mass="0.00903974345886887" fullinertia="3.19392878406911E-06 3.19445127991826E-06 3.17871848285377E-06 1.57796277675502E-08 -2.60215041171046E-13 -4.09407020794523E-13"/>
-        <joint name="zh1_Joint" class="servo" axis="0 0 1"/>
+        <joint name="zh1_Joint" class="servo" axis="0 0 1" range="-1.5708 1.5708"/>
         <geom class="visual" mesh="zh1_Link" rgba="1 1 1 1"/>
         <body name="zh2_Link" pos="-0.015286 0.055597 -0.027474">
           <inertial pos="-0.0448046374721611 0.00972351306067476 0.0051473446849742" mass="0.0134955335748432" fullinertia="3.74201682078465E-06 3.70173897663234E-06 5.62811857445783E-06 5.98845038744401E-07 -2.03599277139701E-07 2.10559575422028E-07"/>
-          <joint name="zh2_Joint" class="servo" axis="0.71889 0.69512 0"/>
+          <joint name="zh2_Joint" class="servo" axis="0.71889 0.69512 0" range="-1.3832 1.7584"/>
           <geom class="visual" mesh="zh2_Link" rgba="0.180392156862745 0.180392156862745 0.180392156862745 1"/>
           <body name="zh2_servo" pos="0 0 0"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="zh3_servo" pos="-0.049827 0.05153 -0.011531"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="zh3_Link" pos="-0.049827 0.05153 -0.011531">
             <inertial pos="-0.024808242901319 -0.0136342918272814 -0.0553135087048479" mass="0.0218288017151581" fullinertia="1.58485132331136E-05 1.59668032612149E-05 6.37957039395007E-06 -1.75868083683053E-06 1.66345752510592E-07 -1.72033826241083E-07"/>
-            <joint name="zh3_Joint" class="servo" axis="-0.71889 -0.69512 0"/>
+            <joint name="zh3_Joint" class="servo" axis="-0.71889 -0.69512 0" range="-1.3121 1.8295"/>
             <geom class="visual" mesh="zh3_Link" rgba="1 1 1 1"/>
             <geom name="zh_foot" class="foot" pos="-0.0227514 -0.016032 -0.135475"/>
             <site name="zh_foot" pos="-0.0227514 -0.016032 -0.135475" size="0.0096"/>
@@ -119,17 +119,17 @@
       </body>
       <body name="yq1_Link" pos="0.10239 -0.050692 0.008903">
         <inertial pos="0.0189659187469652 -0.0170246830569984 -0.0281154669332462" mass="0.00903974345886886" fullinertia="3.19099340446057E-06 3.1973866610204E-06 3.17871848136019E-06 1.54546483260445E-08 2.42542812592196E-13 4.21387595231943E-13"/>
-        <joint name="yq1_Joint" class="servo" axis="0 0 1"/>
+        <joint name="yq1_Joint" class="servo" axis="0 0 1" range="-1.5708 1.5708"/>
         <geom class="visual" mesh="yq1_Link" rgba="1 1 1 1"/>
         <body name="yq2_Link" pos="0.020421 -0.053923 -0.027474">
           <inertial pos="0.0454379695982284 -0.00542014788554539 0.00587454974322894" mass="0.0134955335011356" fullinertia="3.62417024887564E-06 3.80931591527507E-06 5.63838812820948E-06 5.97185892285458E-07 1.85926449638657E-07 -1.5932415815226E-07"/>
-          <joint name="yq2_Joint" class="servo" axis="-0.6507 -0.75934 0"/>
+          <joint name="yq2_Joint" class="servo" axis="-0.6507 -0.75934 0" range="-1.3832 1.7584"/>
           <geom class="visual" mesh="yq2_Link" rgba="0.180392156862745 0.180392156862745 0.180392156862745 1"/>
           <body name="yq2_servo" pos="0 0 0"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="yq3_servo" pos="0.054587 -0.046777 -0.01016"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="yq3_Link" pos="0.054587 -0.046777 -0.01016">
             <inertial pos="0.0234798146031227 0.0158476143406648 -0.0553035125811135" mass="0.0218288017151581" fullinertia="1.61775708738985E-05 1.56383650562552E-05 6.37895095812479E-06 -1.73921269308642E-06 -1.70257801415724E-07 1.45898643313525E-07"/>
-            <joint name="yq3_Joint" class="servo" axis="0.6507 0.75934 0"/>
+            <joint name="yq3_Joint" class="servo" axis="0.6507 0.75934 0" range="-1.3121 1.8295"/>
             <geom class="visual" mesh="yq3_Link" rgba="1 1 1 1"/>
             <geom name="yq_foot" class="foot" pos="0.0212971 0.0179657 -0.135469"/>
             <site name="yq_foot" pos="0.0212971 0.0179657 -0.135469" size="0.0096"/>
@@ -138,17 +138,17 @@
       </body>
       <body name="yz1_Link" pos="0 -0.0809 0.008903">
         <inertial pos="-0.000759084761121716 -0.0254748833075051 -0.0281154668519176" mass="0.00903974345440513" fullinertia="3.2099612435803E-06 3.17841881844351E-06 3.17871848425116E-06 5.7771937879129E-10 4.72249732664524E-13 1.10868341189066E-13"/>
-        <joint name="yz1_Joint" class="servo" axis="0 0 1"/>
+        <joint name="yz1_Joint" class="servo" axis="0 0 1" range="-1.5708 1.5708"/>
         <geom class="visual" mesh="yz1_Link" rgba="1 1 1 1"/>
         <body name="yz2_Link" pos="-0.028 -0.050405 -0.027474">
           <inertial pos="0.025190950107649 -0.0384006549836035 0.00439352563298472" mass="0.0134955337243651" fullinertia="4.32100703768417E-06 3.13528705119651E-06 5.61558051983742E-06 -8.03747770997234E-09 -2.31771349816739E-09 -3.42109509893073E-07"/>
-          <joint name="yz2_Joint" class="servo" axis="-0.99998 0.0067784 0"/>
+          <joint name="yz2_Joint" class="servo" axis="-0.99998 0.0067784 0" range="-1.3832 1.7584"/>
           <geom class="visual" mesh="yz2_Link" rgba="0.180392156862745 0.180392156862745 0.180392156862745 1"/>
           <body name="yz2_servo" pos="0 0 0"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="yz3_servo" pos="-0.00048424 -0.071437 -0.012944"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="yz3_Link" pos="-0.00048424 -0.071437 -0.012944">
             <inertial pos="0.0272645758973313 -0.00707990006769818 -0.0553845194204386" mass="0.0218288017083281" fullinertia="1.41481445939043E-05 1.76613241267954E-05 6.38541816674189E-06 2.38155401374686E-08 2.37945438990914E-09 3.51048368478724E-07"/>
-            <joint name="yz3_Joint" class="servo" axis="0.99998 -0.0067784 0"/>
+            <joint name="yz3_Joint" class="servo" axis="0.99998 -0.0067784 0" range="-1.3121 1.8295"/>
             <geom class="visual" mesh="yz3_Link" rgba="1 1 1 1"/>
             <geom name="yz_foot" class="foot" pos="0.0274799 -0.00305469 -0.13551"/>
             <site name="yz_foot" pos="0.0274799 -0.00305469 -0.13551" size="0.0096"/>
@@ -157,17 +157,17 @@
       </body>
       <body name="yh1_Link" pos="-0.10239 -0.050691 0.008903">
         <inertial pos="-0.0202026401089051 -0.0155370260448612 -0.0281154669142503" mass="0.00903974345886889" fullinertia="3.19162230381821E-06 3.19675776096947E-06 3.17871848205349E-06 -1.55715129970183E-08 3.96431805050284E-13 -2.75158669945571E-13"/>
-        <joint name="yh1_Joint" class="servo" axis="0 0 1"/>
+        <joint name="yh1_Joint" class="servo" axis="0 0 1" range="-1.5708 1.5708"/>
         <geom class="visual" mesh="yh1_Link" rgba="1 1 1 1"/>
         <body name="yh2_Link" pos="-0.056564 -0.01119 -0.027474">
           <inertial pos="-0.0138504593633481 -0.0427534300074516 0.0055336787506305" mass="0.0134955336062035" fullinertia="3.59142093030124E-06 3.84665410506964E-06 5.63379936273573E-06 -5.88342454064981E-07 -2.08187034613885E-07 -1.67872392187649E-07"/>
-          <joint name="yh2_Joint" class="servo" axis="-0.6277 0.77845 0"/>
+          <joint name="yh2_Joint" class="servo" axis="-0.6277 0.77845 0" range="-1.3832 1.7584"/>
           <geom class="visual" mesh="yh2_Link" rgba="0.180392156862745 0.180392156862745 0.180392156862745 1"/>
           <body name="yh2_servo" pos="0 0 0"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="yh3_servo" pos="-0.055333 -0.046189 -0.00871"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="yh3_Link" pos="-0.055333 -0.046189 -0.00871">
             <inertial pos="0.0123550807671221 -0.0224415173468283 -0.0576627288980545" mass="0.0218288017151582" fullinertia="1.62578360820605E-05 1.55197932110237E-05 6.4172575951943E-06 1.70126936454347E-06 5.40030402379553E-07 4.35451057255437E-07"/>
-            <joint name="yh3_Joint" class="servo" axis="0.6277 -0.77845 0"/>
+            <joint name="yh3_Joint" class="servo" axis="0.6277 -0.77845 0" range="-1.3121 1.8295"/>
             <geom class="visual" mesh="yh3_Link" rgba="1 1 1 1"/>
             <geom name="yh_foot" class="foot" pos="0.0176958 -0.0183766 -0.137625"/>
             <site name="yh_foot" pos="0.0176958 -0.0183766 -0.137625" size="0.0096"/>
@@ -191,24 +191,24 @@
   </worldbody>
 
   <actuator>
-    <position name="yq1" joint="yq1_Joint" class="muto"/>  <!-- servo ID 1 -->
-    <position name="yq2" joint="yq2_Joint" class="muto"/>  <!-- servo ID 2 -->
-    <position name="yq3" joint="yq3_Joint" class="muto"/>  <!-- servo ID 3 -->
-    <position name="yz1" joint="yz1_Joint" class="muto"/>  <!-- servo ID 4 -->
-    <position name="yz2" joint="yz2_Joint" class="muto"/>  <!-- servo ID 5 -->
-    <position name="yz3" joint="yz3_Joint" class="muto"/>  <!-- servo ID 6 -->
-    <position name="yh1" joint="yh1_Joint" class="muto"/>  <!-- servo ID 7 -->
-    <position name="yh2" joint="yh2_Joint" class="muto"/>  <!-- servo ID 8 -->
-    <position name="yh3" joint="yh3_Joint" class="muto"/>  <!-- servo ID 9 -->
-    <position name="zh1" joint="zh1_Joint" class="muto"/>  <!-- servo ID 10 -->
-    <position name="zh2" joint="zh2_Joint" class="muto"/>  <!-- servo ID 11 -->
-    <position name="zh3" joint="zh3_Joint" class="muto"/>  <!-- servo ID 12 -->
-    <position name="zz1" joint="zz1_Joint" class="muto"/>  <!-- servo ID 13 -->
-    <position name="zz2" joint="zz2_Joint" class="muto"/>  <!-- servo ID 14 -->
-    <position name="zz3" joint="zz3_Joint" class="muto"/>  <!-- servo ID 15 -->
-    <position name="zq1" joint="zq1_Joint" class="muto"/>  <!-- servo ID 16 -->
-    <position name="zq2" joint="zq2_Joint" class="muto"/>  <!-- servo ID 17 -->
-    <position name="zq3" joint="zq3_Joint" class="muto"/>  <!-- servo ID 18 -->
+    <position name="yq1" joint="yq1_Joint" class="muto" ctrlrange="-1.5708 1.5708"/>  <!-- servo ID 1 -->
+    <position name="yq2" joint="yq2_Joint" class="muto" ctrlrange="-1.3832 1.7584"/>  <!-- servo ID 2 -->
+    <position name="yq3" joint="yq3_Joint" class="muto" ctrlrange="-1.3121 1.8295"/>  <!-- servo ID 3 -->
+    <position name="yz1" joint="yz1_Joint" class="muto" ctrlrange="-1.5708 1.5708"/>  <!-- servo ID 4 -->
+    <position name="yz2" joint="yz2_Joint" class="muto" ctrlrange="-1.3832 1.7584"/>  <!-- servo ID 5 -->
+    <position name="yz3" joint="yz3_Joint" class="muto" ctrlrange="-1.3121 1.8295"/>  <!-- servo ID 6 -->
+    <position name="yh1" joint="yh1_Joint" class="muto" ctrlrange="-1.5708 1.5708"/>  <!-- servo ID 7 -->
+    <position name="yh2" joint="yh2_Joint" class="muto" ctrlrange="-1.3832 1.7584"/>  <!-- servo ID 8 -->
+    <position name="yh3" joint="yh3_Joint" class="muto" ctrlrange="-1.3121 1.8295"/>  <!-- servo ID 9 -->
+    <position name="zh1" joint="zh1_Joint" class="muto" ctrlrange="-1.5708 1.5708"/>  <!-- servo ID 10 -->
+    <position name="zh2" joint="zh2_Joint" class="muto" ctrlrange="-1.3832 1.7584"/>  <!-- servo ID 11 -->
+    <position name="zh3" joint="zh3_Joint" class="muto" ctrlrange="-1.3121 1.8295"/>  <!-- servo ID 12 -->
+    <position name="zz1" joint="zz1_Joint" class="muto" ctrlrange="-1.5708 1.5708"/>  <!-- servo ID 13 -->
+    <position name="zz2" joint="zz2_Joint" class="muto" ctrlrange="-1.3832 1.7584"/>  <!-- servo ID 14 -->
+    <position name="zz3" joint="zz3_Joint" class="muto" ctrlrange="-1.3121 1.8295"/>  <!-- servo ID 15 -->
+    <position name="zq1" joint="zq1_Joint" class="muto" ctrlrange="-1.5708 1.5708"/>  <!-- servo ID 16 -->
+    <position name="zq2" joint="zq2_Joint" class="muto" ctrlrange="-1.3832 1.7584"/>  <!-- servo ID 17 -->
+    <position name="zq3" joint="zq3_Joint" class="muto" ctrlrange="-1.3121 1.8295"/>  <!-- servo ID 18 -->
   </actuator>
 
   <sensor>
