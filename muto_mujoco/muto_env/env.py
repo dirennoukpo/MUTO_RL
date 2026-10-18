@@ -1,6 +1,6 @@
 """MUTO RS walking on velocity commands (zero command = stand still in the home pose).
 
-Policy interface — this is what the real robot must reproduce (see ROBOT_NOTES 6b/6c):
+Policy interface: this is what the real robot must reproduce (see ROBOT_NOTES 6b/6c):
   obs (29) = projected gravity (3) | 0.25·gyro [rad/s] (3) | previous action (18) | command / CMD_MAX (3)
              | gait clock sin, cos (2π · GAIT_HZ · t) (2), or (0, 0) when the command is zero (= stand still)
   act (18) = joint targets: home + ACTION_SCALE · action, servo-ID order (robot.JOINT_NAMES),
