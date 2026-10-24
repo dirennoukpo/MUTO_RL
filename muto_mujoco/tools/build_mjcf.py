@@ -6,7 +6,9 @@ Run again whenever muto_des.urdf or a constant below changes:
 What this does compared to a raw URDF import:
   * adds a free joint so the body is not bolted to the world
   * meshes are visual-only; collisions use simple shapes (2 boxes for the body,
-    1 sphere per foot) which is faster and more stable for RL
+    1 sphere per foot, 1 capsule per femur, 1 box per tibia shaft) which is faster and more stable for RL.
+    Leg shapes only touch the ground/terrain (contype 2), so a shin can catch on a step edge
+    but legs don't collide with each other or the body.
   * adds the servo masses the SolidWorks export is missing (see SERVO_MASS)
   * models the Yahboom 35 kg bus servo as a DC motor + position controller
   * orders the actuators by the real servo IDs 1..18
@@ -39,6 +41,9 @@ OUT = ROOT / "model/muto.xml"
 #   leg4 zh: 10 11 12  leg5 zz: 13 14 15  leg6 zq: 16 17 18
 from muto_env.robot import LEGS_BY_SERVO_ID  # noqa: E402
 FOOT_RADIUS = 0.008  # [m] rubber foot cap, ~16 mm diameter in photos
+TIBIA_SHAFT_Z = (-0.128, -0.045)  # [m] tibia part covered by a box fitted to the mesh (link frame). It stops
+#                                   15 mm above the foot bottom, so the foot stays the lowest point when tilted.
+FEMUR_RADIUS = 0.012  # [m] [ESTIMATE] femur + servo bracket collision capsule
 
 # ── Servo: Yahboom 35KG serial bus servo (datasheet: YB-SD35M "Introduction of 35kg bus servo") ──
 # Values marked [DATASHEET] are from the datasheet at 7.4 V; [ESTIMATE] must be identified on the robot.
@@ -82,6 +87,14 @@ def foot_tip(leg):
     """Lowest vertex of the lower-leg mesh (link frame == world-aligned at zero pose)."""
     v = trimesh.load_mesh(MESH_DIR / f"{leg}3_Link.stl").vertices
     return v[v[:, 2].argmin()]
+
+
+def tibia_box(leg):
+    """Axis-aligned box (center, half-sizes) around the tibia shaft vertices, in the link frame."""
+    v = trimesh.load_mesh(MESH_DIR / f"{leg}3_Link.stl").vertices
+    v = v[(v[:, 2] >= TIBIA_SHAFT_Z[0]) & (v[:, 2] <= TIBIA_SHAFT_Z[1])]
+    lo, hi = v.min(axis=0), v.max(axis=0)
+    return (lo + hi) / 2, (hi - lo) / 2
 
 
 def servo_inertia():
@@ -136,10 +149,14 @@ def main():
             # SolidWorks lists both the femur (2) and knee (3) servos inside the *2_Link part
             knee = next(j for j in children[name] if j.get("type") == "revolute")
             servo_body(f"{leg}2_servo", [0, 0, 0], ind + "  ")
-            servo_body(f"{leg}3_servo", [float(x) for x in knee.find("origin").get("xyz").split()], ind + "  ")
+            knee_pos = [float(x) for x in knee.find("origin").get("xyz").split()]
+            servo_body(f"{leg}3_servo", knee_pos, ind + "  ")
+            out(f'{ind}  <geom name="{leg}_femur" class="leg" size="{FEMUR_RADIUS}" fromto="0 0 0 {fmt(knee_pos)}"/>')
         if name.endswith("3_Link"):
             tip = foot_tip(leg) + [0, 0, FOOT_RADIUS]
             out(f'{ind}  <geom name="{leg}_foot" class="foot" pos="{fmt(tip)}"/>')
+            center, half = tibia_box(leg)
+            out(f'{ind}  <geom name="{leg}_tibia" class="leg" type="box" pos="{fmt(center)}" size="{fmt(half)}"/>')
             out(f'{ind}  <site name="{leg}_foot" pos="{fmt(tip)}" size="{FOOT_RADIUS * 1.2:.4g}"/>')
         for child in children.get(name, []):
             body(child, ind + "  ")
@@ -157,6 +174,8 @@ def main():
     out('      <default class="servo"/>')
     out('      <default class="visual"><geom type="mesh" contype="0" conaffinity="0" group="2" density="0"/></default>')
     out('      <default class="collision"><geom group="3" rgba="0.8 0.2 0.2 0.4"/></default>')
+    out('      <default class="leg"><geom type="capsule" group="3" contype="2" conaffinity="0" density="0" '
+        'rgba="0.9 0.6 0.2 0.4"/></default>')
     out(f'      <default class="foot"><geom type="sphere" size="{FOOT_RADIUS}" group="3" priority="1" '
         f'friction="1.0 0.02 0.01" condim="3" rgba="0.2 0.6 0.9 1"/></default>')
     out("    </default>")

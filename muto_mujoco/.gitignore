@@ -3,3 +3,9 @@ assets/meshes/
 
 # training outputs
 runs/
+
+# videos and local screenshots (large, kept out of git)
+docs/*.mp4
+docs/videos/
+screenshot.png
+__pycache__/

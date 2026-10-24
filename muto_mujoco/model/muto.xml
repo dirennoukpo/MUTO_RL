@@ -9,6 +9,7 @@
       <default class="servo"/>
       <default class="visual"><geom type="mesh" contype="0" conaffinity="0" group="2" density="0"/></default>
       <default class="collision"><geom group="3" rgba="0.8 0.2 0.2 0.4"/></default>
+      <default class="leg"><geom type="capsule" group="3" contype="2" conaffinity="0" density="0" rgba="0.9 0.6 0.2 0.4"/></default>
       <default class="foot"><geom type="sphere" size="0.008" group="3" priority="1" friction="1.0 0.02 0.01" condim="3" rgba="0.2 0.6 0.9 1"/></default>
     </default>
   </default>
@@ -70,11 +71,13 @@
           <geom class="visual" mesh="zq2_Link" rgba="0.180392156862745 0.180392156862745 0.180392156862745 1"/>
           <body name="zq2_servo" pos="0 0 0"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="zq3_servo" pos="0.051296 0.050511 -0.0094001"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
+          <geom name="zq_femur" class="leg" size="0.012" fromto="0 0 0 0.051296 0.050511 -0.0094001"/>
           <body name="zq3_Link" pos="0.051296 0.050511 -0.0094001">
             <inertial pos="-0.0140726677039502 0.0244731914237745 -0.0553529584226903" mass="0.0218288017151581" fullinertia="1.59333148326703E-05 1.58790827650997E-05 6.38248929050859E-06 1.75800653003959E-06 -2.14005800372377E-07 -2.10730601345386E-07"/>
             <joint name="zq3_Joint" class="servo" axis="-0.70163 0.71254 0" range="-1.3121 1.8295"/>
             <geom class="visual" mesh="zq3_Link" rgba="1 1 1 1"/>
             <geom name="zq_foot" class="foot" pos="-0.0167913 0.02206 -0.135496"/>
+            <geom name="zq_tibia" class="leg" type="box" pos="-0.0145557 0.0242514 -0.0843881" size="0.0125743 0.0127312 0.0361822"/>
             <site name="zq_foot" pos="-0.0167913 0.02206 -0.135496" size="0.0096"/>
           </body>
         </body>
@@ -89,11 +92,13 @@
           <geom class="visual" mesh="zz2_Link" rgba="0.180392156862745 0.180392156862745 0.180392156862745 1"/>
           <body name="zz2_servo" pos="0 0 0"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="zz3_servo" pos="0.0011713 0.071318 -0.013545"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
+          <geom name="zz_femur" class="leg" size="0.012" fromto="0 0 0 0.0011713 0.071318 -0.013545"/>
           <body name="zz3_Link" pos="0.0011713 0.071318 -0.013545">
             <inertial pos="-0.0271513561152309 0.0100015835797411 -0.0549881737337901" mass="0.0218288017111724" fullinertia="1.41489327372738E-05 1.76681561594606E-05 6.37779799106708E-06 5.78159429767663E-08 3.16990534840714E-09 1.92994418686503E-07"/>
             <joint name="zz3_Joint" class="servo" axis="-0.99987 0.016422 0" range="-1.3121 1.8295"/>
             <geom class="visual" mesh="zz3_Link" rgba="1 1 1 1"/>
             <geom name="zz_foot" class="foot" pos="-0.0273357 0.010227 -0.135205"/>
+            <geom name="zz_tibia" class="leg" type="box" pos="-0.0273724 0.0148561 -0.0838299" size="0.0166088 0.0075016 0.0359636"/>
             <site name="zz_foot" pos="-0.0273357 0.010227 -0.135205" size="0.0096"/>
           </body>
         </body>
@@ -108,11 +113,13 @@
           <geom class="visual" mesh="zh2_Link" rgba="0.180392156862745 0.180392156862745 0.180392156862745 1"/>
           <body name="zh2_servo" pos="0 0 0"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="zh3_servo" pos="-0.049827 0.05153 -0.011531"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
+          <geom name="zh_femur" class="leg" size="0.012" fromto="0 0 0 -0.049827 0.05153 -0.011531"/>
           <body name="zh3_Link" pos="-0.049827 0.05153 -0.011531">
             <inertial pos="-0.024808242901319 -0.0136342918272814 -0.0553135087048479" mass="0.0218288017151581" fullinertia="1.58485132331136E-05 1.59668032612149E-05 6.37957039395007E-06 -1.75868083683053E-06 1.66345752510592E-07 -1.72033826241083E-07"/>
             <joint name="zh3_Joint" class="servo" axis="-0.71889 -0.69512 0" range="-1.3121 1.8295"/>
             <geom class="visual" mesh="zh3_Link" rgba="1 1 1 1"/>
             <geom name="zh_foot" class="foot" pos="-0.0227514 -0.016032 -0.135475"/>
+            <geom name="zh_tibia" class="leg" type="box" pos="-0.0245649 -0.0141338 -0.0843277" size="0.0128223 0.0124803 0.0361589"/>
             <site name="zh_foot" pos="-0.0227514 -0.016032 -0.135475" size="0.0096"/>
           </body>
         </body>
@@ -127,11 +134,13 @@
           <geom class="visual" mesh="yq2_Link" rgba="0.180392156862745 0.180392156862745 0.180392156862745 1"/>
           <body name="yq2_servo" pos="0 0 0"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="yq3_servo" pos="0.054587 -0.046777 -0.01016"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
+          <geom name="yq_femur" class="leg" size="0.012" fromto="0 0 0 0.054587 -0.046777 -0.01016"/>
           <body name="yq3_Link" pos="0.054587 -0.046777 -0.01016">
             <inertial pos="0.0234798146031227 0.0158476143406648 -0.0553035125811135" mass="0.0218288017151581" fullinertia="1.61775708738985E-05 1.56383650562552E-05 6.37895095812479E-06 -1.73921269308642E-06 -1.70257801415724E-07 1.45898643313525E-07"/>
             <joint name="yq3_Joint" class="servo" axis="0.6507 0.75934 0" range="-1.3121 1.8295"/>
             <geom class="visual" mesh="yq3_Link" rgba="1 1 1 1"/>
             <geom name="yq_foot" class="foot" pos="0.0212971 0.0179657 -0.135469"/>
+            <geom name="yq_tibia" class="leg" type="box" pos="0.0232465 0.0163899 -0.0843124" size="0.0118341 0.0133973 0.0361529"/>
             <site name="yq_foot" pos="0.0212971 0.0179657 -0.135469" size="0.0096"/>
           </body>
         </body>
@@ -146,11 +155,13 @@
           <geom class="visual" mesh="yz2_Link" rgba="0.180392156862745 0.180392156862745 0.180392156862745 1"/>
           <body name="yz2_servo" pos="0 0 0"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="yz3_servo" pos="-0.00048424 -0.071437 -0.012944"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
+          <geom name="yz_femur" class="leg" size="0.012" fromto="0 0 0 -0.00048424 -0.071437 -0.012944"/>
           <body name="yz3_Link" pos="-0.00048424 -0.071437 -0.012944">
             <inertial pos="0.0272645758973313 -0.00707990006769818 -0.0553845194204386" mass="0.0218288017083281" fullinertia="1.41481445939043E-05 1.76613241267954E-05 6.38541816674189E-06 2.38155401374686E-08 2.37945438990914E-09 3.51048368478724E-07"/>
             <joint name="yz3_Joint" class="servo" axis="0.99998 -0.0067784 0" range="-1.3121 1.8295"/>
             <geom class="visual" mesh="yz3_Link" rgba="1 1 1 1"/>
             <geom name="yz_foot" class="foot" pos="0.0274799 -0.00305469 -0.13551"/>
+            <geom name="yz_tibia" class="leg" type="box" pos="0.0274646 -0.0106191 -0.0844388" size="0.0166107 0.00588403 0.0362032"/>
             <site name="yz_foot" pos="0.0274799 -0.00305469 -0.13551" size="0.0096"/>
           </body>
         </body>
@@ -165,11 +176,13 @@
           <geom class="visual" mesh="yh2_Link" rgba="0.180392156862745 0.180392156862745 0.180392156862745 1"/>
           <body name="yh2_servo" pos="0 0 0"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
           <body name="yh3_servo" pos="-0.055333 -0.046189 -0.00871"><inertial pos="0 0 0" mass="0.0615" diaginertia="1.66063e-05 1.04563e-05 1.025e-05"/></body>
+          <geom name="yh_femur" class="leg" size="0.012" fromto="0 0 0 -0.055333 -0.046189 -0.00871"/>
           <body name="yh3_Link" pos="-0.055333 -0.046189 -0.00871">
             <inertial pos="0.0123550807671221 -0.0224415173468283 -0.0576627288980545" mass="0.0218288017151582" fullinertia="1.62578360820605E-05 1.55197932110237E-05 6.4172575951943E-06 1.70126936454347E-06 5.40030402379553E-07 4.35451057255437E-07"/>
             <joint name="yh3_Joint" class="servo" axis="0.6277 -0.77845 0" range="-1.3121 1.8295"/>
             <geom class="visual" mesh="yh3_Link" rgba="1 1 1 1"/>
             <geom name="yh_foot" class="foot" pos="0.0176958 -0.0183766 -0.137625"/>
+            <geom name="yh_tibia" class="leg" type="box" pos="0.012813 -0.0222932 -0.086838" size="0.0116617 0.0136917 0.0363327"/>
             <site name="yh_foot" pos="0.0176958 -0.0183766 -0.137625" size="0.0096"/>
           </body>
         </body>

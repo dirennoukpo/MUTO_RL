@@ -54,7 +54,7 @@ def main():
         action=robot.JOINT_NAMES, action_scale_rad=ACTION_SCALE, gyro_scale=GYRO_SCALE, cmd_max=CMD_MAX.tolist(),
         home_rad=env.home_ctrl.tolist(), joint_range_rad=[env.ctrl_lo.tolist(), env.ctrl_hi.tolist()],
         servo_sign=list(robot.SERVO_SIGN), servo_offset_deg=list(robot.SERVO_OFFSET_DEG),
-        control_hz=robot.CONTROL_HZ, imu_hz=robot.IMU_HZ)
+        control_hz=robot.CONTROL_HZ, imu_hz=robot.IMU_HZ, heading_gain=2.0)
     m = onnx.load(out)
     m.metadata_props.add(key="muto_interface", value=json.dumps(interface))
     onnx.save(m, out)

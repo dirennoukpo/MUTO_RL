@@ -23,6 +23,17 @@ Current policy (v4, simulation, randomized robot, no pushes):
 | straight-line drift, with heading hold | 0 | ~1° per 10 s |
 | falls | 0 | 0 |
 
+Step policy (`--terrain`, curriculum on step height 0 to 5 cm, same 29 inputs as v4). Walking forward 15 s,
+success = climb two steps up without falling, 10 randomized robots per height:
+
+| Step height | 2 cm | 3 cm | 4 cm | 5 cm |
+|---|---|---|---|---|
+| v4 (flat-ground training) | 50% | 0% | 0% | 0% |
+| step policy (`steps_nomem_s1`) | 100% | 100% | 50% | 0% |
+
+No falls. Known limit: it gets stuck in a flat gap shorter than the robot (20 cm) between a step down and a step up.
+A memory variant (last 5 observations) made no measurable difference (2 seeds each).
+
 Not tested on the real robot yet. The biggest open question is the real servo response time.
 
 ## Setup
@@ -49,8 +60,11 @@ collision shapes, `2` to hide meshes.
 ```bash
 uv run python train.py                                # PPO on 6 CPU processes, ~50 min for 5M steps
 uv run python train.py --init runs/<run>/final.zip    # continue from a trained policy
+uv run python train.py --terrain --steps 2e7          # step terrain with curriculum (~3.5 h)
 uv run tensorboard --logdir runs                      # progress at http://localhost:6006
 uv run python play.py runs/<run>/final.zip            # viewer: arrows / , . to steer, space to stand
+uv run python play.py runs/<run>/final.zip --step 0.03  # on 3 cm steps; + / - change the height
+uv run python tools/steps_eval.py runs/<run>/final.zip  # step-climbing success per height
 uv run python tools/evaluate.py runs/<run>/final.zip  # speed achieved per command, drift, falls
 uv run python tools/record.py runs/<run>/final.zip out.gif
 uv run python export_onnx.py runs/<run>/final.zip     # -> final.onnx for the robot's muto_policy node
@@ -84,7 +98,10 @@ Documented at the top of `muto_env/env.py` and embedded in the exported ONNX as 
 | `tools/evaluate.py` / `tools/record.py` | command-tracking numbers / GIF of a policy |
 | `muto_env/robot.py` | real-robot facts: servo-ID order, servo↔URDF angle conversion, rates |
 | `muto_env/env.py` | Gymnasium environment: observation/action interface, rewards, randomization |
+| `muto_env/terrain.py` | step terrain: rings of boxes on mocap bodies, heights h, 2h, h, 0, ... |
 | `train.py` / `play.py` / `export_onnx.py` | train with PPO / watch and steer / export to ONNX |
+| `tools/ablate_eval.py` / `tools/steps_eval.py` / `tools/video.py` | clock ablation / step tests / MP4 video |
+| `deploy/` | robot side: reference `policy_io.py`, ROS 2 node + self-test (`deploy/ros2/`), exported models, test vectors |
 | `docs/walk.gif` | the GIF above |
 
 After a new SolidWorks export: `uv run python tools/prepare_meshes.py && uv run python tools/build_mjcf.py`.

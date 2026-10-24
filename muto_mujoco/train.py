@@ -21,7 +21,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor, VecNormalize
 
-from muto_env.env import MutoEnv
+from muto_env.env import EnvConfig, MutoEnv
 
 RUNS = pathlib.Path(__file__).parent / "runs"
 
@@ -47,8 +47,8 @@ class RewardTermsCallback(BaseCallback):
         self.sums, self.n = {}, 0
 
 
-def make_env(rank, seed):
-    return lambda: MutoEnv(seed=seed + rank)
+def make_env(rank, seed, cfg):
+    return lambda: MutoEnv(cfg, seed=seed + 1000 * rank)
 
 
 def main():
@@ -58,13 +58,17 @@ def main():
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--name", default="walk")
     p.add_argument("--init", help="start from this trained policy (.zip) instead of from scratch")
+    p.add_argument("--no-clock", action="store_true", help="ablation: no gait clock input, no tripod-gait reward")
+    p.add_argument("--terrain", action="store_true", help="step terrain with a step-height curriculum")
+    p.add_argument("--history", type=int, default=1, help="observation frames given to the policy (1 = no memory)")
     args = p.parse_args()
 
     torch.set_num_threads(2)
     run = RUNS / f"{datetime.datetime.now():%Y-%m-%d_%H-%M}_{args.name}"
     run.mkdir(parents=True)
 
-    venv = SubprocVecEnv([make_env(i, args.seed) for i in range(args.envs)], start_method="fork")
+    cfg = EnvConfig(use_clock=not args.no_clock, terrain=args.terrain, history=args.history)
+    venv = SubprocVecEnv([make_env(i, args.seed, cfg) for i in range(args.envs)], start_method="fork")
     venv = VecMonitor(venv)
     # rewards are normalized for learning; observations are NOT (the robot would need the stats)
     venv = VecNormalize(venv, norm_obs=False, norm_reward=True, gamma=0.99)

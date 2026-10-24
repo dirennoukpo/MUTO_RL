@@ -1,0 +1,40 @@
+diff -ru a/muto_ws/src/muto_bringup/src/muto_hardware.cpp b/muto_ws/src/muto_bringup/src/muto_hardware.cpp
+--- a/muto_ws/src/muto_bringup/src/muto_hardware.cpp	2026-10-21 17:35:55.566177987 +0100
++++ b/muto_ws/src/muto_bringup/src/muto_hardware.cpp	2026-10-21 17:36:14.271534581 +0100
+@@ -294,10 +294,11 @@
+       servo_speed_ = static_cast<uint16_t>(std::min(raw_speed, (unsigned long)65535));
+     } catch(...) {}
+   }
+-  // FIX: servo_speed=0 → comportement indéfini firmware (servo bloqué ou ignoré)
+-  if (servo_speed_ == 0) {
+-    RCLCPP_WARN(logger_, "servo_speed=0 invalide (firmware MUTO), forcé à %u", kDefaultServoSpeed);
+-    servo_speed_ = kDefaultServoSpeed;
++  // servo_speed is the servo's move time in ms. 0 = "move at the fastest speed" (Yahboom 35 kg bus servo
++  // manual, "Control bus servo" 4.2), which is what the RL policy is trained with. Any value > 20 ms makes
++  // the servo lag behind the 50 Hz commands.
++  if (servo_speed_ > 20) {
++    RCLCPP_WARN(logger_, "servo_speed=%u ms > one 50 Hz cycle: servos will lag the policy commands", servo_speed_);
+   }
+ 
+   {auto it = pm.find("update_state_from_hardware"); if(it!=pm.end()) update_state_from_hardware_ = parse_bool(it->second, false);}
+diff -ru a/muto_ws/src/muto_description/urdf/Muto_complet.urdf.xacro b/muto_ws/src/muto_description/urdf/Muto_complet.urdf.xacro
+--- a/muto_ws/src/muto_description/urdf/Muto_complet.urdf.xacro	2026-10-21 17:35:55.590178444 +0100
++++ b/muto_ws/src/muto_description/urdf/Muto_complet.urdf.xacro	2026-10-21 17:36:14.271534581 +0100
+@@ -11,8 +11,15 @@
+       <param name="read_timeout_sec">0.050</param>
+       <param name="retry_count">1</param>
+       <param name="validate_checksum">true</param>
+-      <param name="servo_speed">300</param>
+-      <param name="servo_ids">1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18</param>
++      <!-- move time [ms]; 0 = fastest, as in the RL training (Yahboom servo manual) -->
++      <param name="servo_speed">0</param>
++      <!-- servo ID of each joint below, in this file's joint order (yq yz yh zq zz zh).
++           Yahboom docs: left rear (zh) = 10-12, left front (zq) = 16-18. CHECK ON THE ROBOT. -->
++      <param name="servo_ids">1 2 3 4 5 6 7 8 9 16 17 18 13 14 15 10 11 12</param>
++      <!-- URDF angle -> servo degrees: servo = sign * deg(q) + offset, then rounded (muto_mujoco/muto_env/robot.py).
++           Femur (2) and tibia (3) servos turn the other way; offsets = femur droop 10.75, + tibia lean 4.07. -->
++      <param name="servo_invert_ids">2 3 5 6 8 9 11 12 14 15 17 18</param>
++      <param name="servo_offsets">0 10.75 14.82 0 10.75 14.82 0 10.75 14.82 0 10.75 14.82 0 10.75 14.82 0 10.75 14.82</param>
+       <param name="update_state_from_hardware">false</param>
+       <param name="imu_publish_rate">25.0</param>
+       <param name="imu_frame_id">imu_link</param>
