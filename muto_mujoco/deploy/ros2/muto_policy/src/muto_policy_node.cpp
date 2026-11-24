@@ -44,6 +44,11 @@ public:
     ramp_s_ = declare_parameter<double>("ramp_s", 2.0);
     max_tilt_deg_ = declare_parameter<double>("max_tilt_deg", 50.0);
     imu_timeout_s_ = declare_parameter<double>("imu_timeout_s", 0.2);
+    // IMU board mounting: its axes are the body axes turned by this angle around the vertical.
+    // MUTO RS checked on 2026-11-21: 180 (IMU x points backward, y to the right). Gravity and gyro both flipped.
+    const double off = declare_parameter<double>("imu_yaw_offset_deg", 180.0) * M_PI / 180.0;
+    mount_c_ = std::cos(off);
+    mount_s_ = std::sin(off);
     cmd_timeout_s_ = declare_parameter<double>("cmd_timeout_s", 0.5);
 
     policy_ = std::make_unique<muto_policy::OnnxPolicy>(path);
@@ -60,8 +65,12 @@ public:
     imu_sub_ = create_subscription<sensor_msgs::msg::Imu>("/muto/imu", rclcpp::SensorDataQoS(),
       [this](sensor_msgs::msg::Imu::SharedPtr m) {
         std::lock_guard<std::mutex> lock(mutex_);
-        quat_ = {m->orientation.w, m->orientation.x, m->orientation.y, m->orientation.z};
-        gyro_ = {m->angular_velocity.x, m->angular_velocity.y, m->angular_velocity.z};
+        // body orientation = IMU orientation * (yaw rotation of the mounting); gyro rotated back into the body
+        const double w = m->orientation.w, x = m->orientation.x, y = m->orientation.y, z = m->orientation.z;
+        const double hc = std::sqrt((1 + mount_c_) / 2), hs = std::copysign(std::sqrt((1 - mount_c_) / 2), mount_s_);
+        quat_ = {w * hc - z * hs, x * hc + y * hs, y * hc - x * hs, z * hc + w * hs};
+        const double gx = m->angular_velocity.x, gy = m->angular_velocity.y;
+        gyro_ = {mount_c_ * gx + mount_s_ * gy, -mount_s_ * gx + mount_c_ * gy, m->angular_velocity.z};
         imu_time_ = now();
         has_imu_ = true;
       });
@@ -182,6 +191,7 @@ private:
   std::vector<int> to_policy_;
   bool heading_hold_{true};
   double ramp_s_{2.0}, max_tilt_deg_{50.0}, imu_timeout_s_{0.2}, cmd_timeout_s_{0.5};
+  double mount_c_{1.0}, mount_s_{0.0};  // cos / sin of imu_yaw_offset_deg
 
   std::mutex mutex_;
   State state_{State::WAIT};
